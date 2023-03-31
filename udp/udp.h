@@ -20,16 +20,16 @@
 #define STR_BUFLEN 1024
 
 // define UDP packet size 
-#define PKT_DTSZ   4096
+#define PKT_DTSZ   8192
 #define PKT_HDRSZ  8
 #define PKTSZ      (PKT_HDRSZ+PKT_DTSZ)
 
 // define packet contents
-// 4 channels per packet, each channel has 0.5 MHz,
+// 1024 channels per packet, each channel has 0.5 MHz,
 // each sample has 2 bytes (1 for real and 1 for image)
-#define PKT_NCHAN      4
-#define PKT_CHAN_WIDTH 0.5f // MHz
-#define PKT_SAMPSZ     2 // 2 bytes, 1 real and 1 imag
+#define PKT_NCHAN      1024
+#define PKT_CHAN_WIDTH 0.015625f // MHz
+#define PKT_SAMPSZ     8 // 2 bytes, 1 real and 1 imag
 
 #define PKT_NTIME      (PKT_DTSZ/(PKT_NCHAN*PKT_SAMPSZ)) // number of time stamps per packet
 #define TSAMP          (1/PKT_CHAN_WIDTH) // microseconds
@@ -46,7 +46,7 @@
 #define PORT_RECV   60000
 #define AD0         96
 
-#define NSTREAM_UDP 24
+#define NSTREAM_UDP 1
 
 const unsigned window_bytes = 64*pow(1000.0, 2); ///< 64 MB in bytes
 const int reuse = 1; ///< reust address 

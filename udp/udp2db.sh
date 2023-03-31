@@ -41,7 +41,7 @@ function cleanup {
 
 # setup command lines
 WORK_ROOT=/home/hero/code
-project_root=$WORK_ROOT/PAF_pipeline
+project_root=$WORK_ROOT/ART_pipeline
 hdr_root=$project_root/header
 udp_command=$project_root/build/udp/udp2db
 
@@ -50,8 +50,8 @@ $echo "hdr_root is:     $hdr_root"
 $echo "udp_command is:  $udp_command\n"
 
 # setup dada buffer
-pkt_dtsz=4096
-nstream_gpu=24
+pkt_dtsz=8192
+nstream_gpu=1
 npkt=2048
 numa=0
 key=a000
@@ -64,7 +64,7 @@ $echo "DADA key is:    $key"
 $echo "bufsz is:       $bufsz\n"
 
 # create PSRDADA ring buffer
-#dada_db -k $key -b $bufsz -p -l -c $numa -w &
+dada_db -k $key -b $bufsz -p -l -c $numa -w &
 pids+=(`echo $! `)
 keys+=(`echo $key `)
 sleep 1s # just to make sure that all ring buffers are created
@@ -77,7 +77,7 @@ pids+=(`echo $! `)
 $echo "had the data consumer up\n"
 
 # setup tests
-hdr_fname=$hdr_root/paf_test.header
+hdr_fname=$hdr_root/art_test.header
 nblock=1
 nsecond=10
 freq=1420
