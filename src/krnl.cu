@@ -5,50 +5,30 @@
 #include "../include/krnl.h"
 
 
-__global__ void krnl_unpack(int8_t *input, cuComplex *output, int nsamp, int inter,int chan){
+__global__ void krnl_unpack(int32_t *input, cuComplex *output, int nsamp, int chan){
   int index = blockIdx.x * blockDim.x + threadIdx.x;
-  if(index<nsamp && index%8==0){
+  if(index<nsamp*chan && index%2==0){
     output[index] = make_cuFloatComplex((float)input[index],(float)input[index+1]);
   }
 }
 
-__global__ void krnl_power_beamform(cuComplex *input, float *output, int nsamp_accu, int naverage, int reset){
-  int index = blockIdx.x * blockDim.x + threadIdx.x;
-  if (index < nsamp_accu){
-    float accumulate = 0;
-    for(int i = 0; i< naverage; i++){
-      int index_data = nsamp_accu*naverage + i;
-      float amp = cuCabsf(input[index_data]);
-      accumulate +=(amp*amp);
-    }
-    if(reset){
-    output[index] = accumulate;
-    }else{
-    output[index] += accumulate;
-  }
+
+__global__ void krnl_amplitude(float *d_amplitudeOut, cufftComplex *d_fftOut, int NX, int N, int reset){
+  int i = (blockIdx.x * blockDim.x) + threadIdx.x;
+  if (i<N){
+    d_amplitudeOut[i] = cuCabsf(d_fftOut[i]) / NX;
   }
 }
 
-__global__ void krnl_power_zoomfft(cuComplex *input, float *output, int nfft, int nchan, int reset){
-  int ichan = blockIdx.x*blockDim.x + threadIdx.x;
-  if (ichan < nchan){
-    float accumulate = 0;
-    
-    for(int ifft = 0; ifft < nfft; ifft++){
-      int index = ifft*nchan + ichan;
-      float amp = cuCabsf(input[index]);
-      accumulate += (amp*amp); // power, not amp
-    }
-
-    // looks like numpy.fft.rfft has the same scaling factor as R2C cufft 
-    if(reset){
-      output[ichan] = accumulate;
-    }else{
-      output[ichan] += accumulate;
+__global__ void krnl_phase(float * d_divisionOut, cufftComplex *d_fftOut, int N, int reset){
+  int i = (blockIdx.x * blockDim.x) + threadIdx.x;
+  if (i<N){
+    d_divisionOut[i] = atan2f(d_fftOut[i].y, d_fftOut[i].x);
+    if(d_divisionOut[i]<0){
+      d_divisionOut[i] = d_divisionOut[i] + 2*M_PI;
     }
   }
 }
-
 
 __global__ void krnl_power_taccumulate_1ant1pol(cuComplex *input, float *output, int nfft, int nchan, int reset){
 

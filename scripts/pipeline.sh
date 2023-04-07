@@ -54,7 +54,7 @@ WORK_ROOT=/home/hero/code
 project_root=$WORK_ROOT/PAF_pipeline
 hdr_root=$project_root/header
 udp_command=$project_root/build/udp/udp2db
-pipeline_command=$project_root/build/pipeline/pipeline_dada_beamform
+pipeline_command=$project_root/build/pipeline/pipeline_dada_amplitude_phase
 
 $echo "Setting up ring buffers"
 

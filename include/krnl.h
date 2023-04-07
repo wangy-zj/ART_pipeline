@@ -30,7 +30,6 @@
   gridDim.x = nsamp/nthread
   
  */
-__global__ void krnl_unpack_1ant1pol(int8_t *input, float *output, int nsamp);
 
 /*!
   As we are doing real to complex FFT, NCHAN is NPOINT/2+1, where NPOINT is points of real to complex FFT
@@ -43,13 +42,13 @@ __global__ void krnl_unpack_1ant1pol(int8_t *input, float *output, int nsamp);
   nfft is defined by gridDim.y
   ideally we need to transport data from [NFFT NCHAN] to [NCHAN NFFT] before we do time accumulation
 */
-__global__ void krnl_unpack(int8_t *input, cuComplex *output, int nsamp, int inter,int chan);
+__global__ void krnl_unpack(int8_t *input, cuComplex *output, int nsamp, int chan);
 
 __global__ void krnl_power_beamform(cuComplex *input, float *output, int nsamp_acc, int naverage, int reset);
 
-__global__ void krnl_power_zoomfft(cuComplex *input, float *output, int nfft, int nchan, int reset);
+__global__ void krnl_amplitude(float *d_amplitude, cuComplex *d_input, int FFTlen, int nchan, int reset_amp);
 
-__global__ void krnl_power_taccumulate_1ant1pol(cuComplex *input, float *output, int nfft, int nchan, int reset);
+__global__ void krnl_phase (float *d_phase, cuComplex *d_input, int nchan, int reset_phi)
 
 /*!
   This kernel is purely for the transpose of [NFFT-NCHAN] data into [NCHAN-NFFT]
@@ -66,8 +65,8 @@ __global__ void krnl_power_taccumulate_1ant1pol(cuComplex *input, float *output,
   Load matrix into tile
   Every Thread loads in this case 4 elements into tile.
   TILE_DIM/NROWBLOCK_TRANS = 32/8 = 4 
-  
 */
+
 __global__ void krnl_tf2ft_1ant1pol(const cuComplex* in, cuComplex *out, int m, int n);
   
 #endif
