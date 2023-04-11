@@ -46,9 +46,9 @@ __global__ void krnl_unpack(int8_t *input, cuComplex *output, int nsamp, int cha
 
 __global__ void krnl_power_beamform(cuComplex *input, float *output, int nsamp_acc, int naverage, int reset);
 
-__global__ void krnl_amplitude(float *d_amplitude, cuComplex *d_input, int FFTlen, int nchan, int reset_amp);
+__global__ void krnl_amplitude(float *d_amplitude, cuComplex *d_input, int FFTlen, int nchan, int reset);
 
-__global__ void krnl_phase (float *d_phase, cuComplex *d_input, int nchan, int reset_phi)
+__global__ void krnl_phase (float *d_phase, cuComplex *d_input, int nchan, int reset)
 
 /*!
   This kernel is purely for the transpose of [NFFT-NCHAN] data into [NCHAN-NFFT]

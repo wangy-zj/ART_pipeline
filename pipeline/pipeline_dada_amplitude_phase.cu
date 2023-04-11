@@ -423,6 +423,8 @@ int main(int argc, char *argv[]){
     krnl_phase<<<grid_phi, blck_phi>>>(d_phase, d_input, nchan, reset_phi);
     getLastCudaError("Kernel execution failed [ phase ]");
 
+    //krnl_integral<<<grid_integral, 128>>>(d_phase, out_phase, reset_phi)
+
     nblock++;
     if(nblock % naverage == 0){
       reset_amp = 1;

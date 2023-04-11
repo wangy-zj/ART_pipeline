@@ -16,21 +16,33 @@ __global__ void krnl_unpack(int32_t *input, cuComplex *output, int nsamp, int ch
 __global__ void krnl_amplitude(float *d_amplitudeOut, cufftComplex *d_fftOut, int NX, int N, int reset){
   int i = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (i<N){
-    d_amplitudeOut[i] = cuCabsf(d_fftOut[i]) / NX;
+    float d_amplitude = cuCabsf(d_fftOut[i]) / NX;
+  }
+
+  if(reset){
+    d_amplitudeOut[i] = d_amplitude;
+  }else{
+    d_amplitudeOut[i] += d_amplitude;
   }
 }
 
 __global__ void krnl_phase(float * d_divisionOut, cufftComplex *d_fftOut, int N, int reset){
   int i = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (i<N){
-    d_divisionOut[i] = atan2f(d_fftOut[i].y, d_fftOut[i].x);
-    if(d_divisionOut[i]<0){
-      d_divisionOut[i] = d_divisionOut[i] + 2*M_PI;
+    float d_division = atan2f(d_fftOut[i].y, d_fftOut[i].x);
+    if(d_division<0){
+      d_division = d_division + 2*M_PI;
     }
+  }
+
+  if(reset){
+    d_divisionOut[i] = d_division;
+  }else{
+    d_divisionOut[i] += d_division;
   }
 }
 
-__global__ void krnl_power_taccumulate_1ant1pol(cuComplex *input, float *output, int nfft, int nchan, int reset){
+__global__ void krnl_power_taccumulate_1ant1pol(cuComplex *input, float *output, int nfft, int nchan){
 
   int ichan = blockIdx.x*blockDim.x + threadIdx.x;
   if (ichan < nchan){
