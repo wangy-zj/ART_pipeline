@@ -19,21 +19,24 @@
 
 #define STR_BUFLEN 1024
 
+// 设置udp包的大小，变化之后要修改！！
 // define UDP packet size 
-#define PKT_DTSZ   8192
+#define PKT_DTSZ   8000
 #define PKT_HDRSZ  8
 #define PKTSZ      (PKT_HDRSZ+PKT_DTSZ)
 
 // define packet contents
-// 1024 channels per packet, each channel has 0.5 MHz,
+// 1 channels per packet, each channel has 0.5 MHz,
 // each sample has 2 bytes (1 for real and 1 for image)
-#define PKT_NCHAN      1024
+#define PKT_NCHAN      1000
 #define PKT_CHAN_WIDTH 0.015625f // MHz
-#define PKT_SAMPSZ     8 // 2 bytes, 1 real and 1 imag
+#define PKT_SAMPSZ     8 // 8 bytes, 4 real and 4 imag
+#define NAVERAGE       100
 
-#define PKT_NTIME      (PKT_DTSZ/(PKT_NCHAN*PKT_SAMPSZ)) // number of time stamps per packet
+#define PKT_NTIME      (PKT_DTSZ/(PKT_NCHAN*PKT_SAMPSZ))  //number of time stamps per packet
 #define TSAMP          (1/PKT_CHAN_WIDTH) // microseconds
 #define PKT_DURATION   (PKT_NTIME*TSAMP)  // microseconds
+
 
 // define network interfaces
 //#define IP_SEND     "192.168.2.20"

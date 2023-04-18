@@ -74,10 +74,12 @@ $echo "nreader_raw is: $nreader_raw"
 $echo "nreader_amp is: $nreader_amp"
 $echo "nreader_phi is: $nreader_phi\n"
 
-pkt_dtsz=8192
+# udp包设置，变化之后要修改！！！
+pkt_dtsz=8000
 nstream=1
-npkt=2048
-naverage=128
+npkt=100
+naverage=100
+
 numa=0
 bufsz=$(( pkt_dtsz*nstream*npkt ))
 $echo "pkt_dtsz is:    $pkt_dtsz"
@@ -99,9 +101,9 @@ numa=0 # numa node to use
 $echo "numa is: $numa\n"
 
 $echo "Creating ring buffers"
-dada_raw="dada_db -k $key_raw -b $bufsz_raw -p -w -c $numa -r 2"  #assign memory from NUMA node  [default: all nodes]
-dada_amp="dada_db -k $key_amp -b $bufsz_amp -p -w -c $numa"
-dada_phi="dada_db -k $key_phi -b $bufsz_phi -p -w -c $numa"
+dada_raw="dada_db -k $key_raw -b $bufsz_raw -n 8 -p -w -c $numa -r 2"  #assign memory from NUMA node  [default: all nodes]
+dada_amp="dada_db -k $key_amp -b $bufsz_amp -n 8 -p -w -c $numa"
+dada_phi="dada_db -k $key_phi -b $bufsz_phi -n 8 -p -w -c $numa"
 
 $echo "dada_raw is: $dada_raw"
 $echo "dada_amp is: $dada_amp"
@@ -160,7 +162,7 @@ $process & # should be unblock
 #$echo "udp2db $udp2db\n"
 #$udp2db
 hdr_fname=$hdr_root/art_test.header
-nblock=128
+nblock=100
 nsecond=50
 freq=1420
 

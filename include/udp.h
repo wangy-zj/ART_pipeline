@@ -13,7 +13,7 @@
 #define STR_BUFLEN 1024
 
 //#define PKT_DTSZ   8192
-#define PKT_DTSZ   4096
+#define PKT_DTSZ   8000
 #define PKT_HDRSZ  8
 #define PKTSZ      (PKT_HDRSZ+PKT_DTSZ)
 
