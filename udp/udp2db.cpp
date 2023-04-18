@@ -24,6 +24,7 @@ int main(int argc, char *argv[]){
   double freq = 1400.0;
   int nblock  = 100;
   int nsecond = 10;
+  int nblocksave = 128;
   key_t key = 0x0000a000;
   
   sprintf(fname, "../../header/paf_test.header");
@@ -297,11 +298,12 @@ int main(int argc, char *argv[]){
   // need to understand how data streams are sorted
   // otherwise I can not make bandwidth and nchan right
   uint64_t bytes_per_second = 1E6*PKT_DTSZ*NSTREAM_UDP/(double)PKT_DURATION;  //每秒传输的数据量
-  uint64_t file_size        = bytes_per_second*nsecond_record;                //计算实际每个file的大小
+  //uint64_t file_size        = bytes_per_second*nsecond_record;                //计算实际每个file的大小
+  uint64_t file_size        = bytes_per_second*block_duration*nblocksave;
   fprintf(stdout, "UDP2DB_INFO: bytes_per_second is %" PRIu64 "\n", bytes_per_second);
   fprintf(stdout, "UDP2DB_INFO: file_size is %" PRIu64 "\n", file_size);
   
-  if (ascii_header_set(hdrbuf, "TSAMP", "%f", TSAMP) < 0)  {
+  if (ascii_header_set(hdrbuf, "PKT_TSAMP", "%f", TSAMP) < 0)  {
     fprintf(stderr, "UDP2DB_ERROR: Error setting TSAMP, "
             "which happens at %s, line [%d].\n",
             __FILE__, __LINE__);
@@ -350,6 +352,34 @@ int main(int argc, char *argv[]){
     exit(EXIT_FAILURE);
   }
 
+  if (ascii_header_set(hdrbuf, "NPKT", "%" PRIu64 "", npacket) < 0)  {
+    fprintf(stderr, "UDP2DB_ERROR: Error setting NPKT, "
+            "which happens at %s, line [%d].\n",
+            __FILE__, __LINE__);
+    exit(EXIT_FAILURE);
+  }
+
+  if (ascii_header_set(hdrbuf, "PKT_NCHAN", "%" PRIu64 "", PKT_NCHAN) < 0)  {
+      fprintf(stderr, "UDP2DB_ERROR: Error setting PKT_NCHAN, "
+              "which happens at %s, line [%d].\n",
+              __FILE__, __LINE__);
+      exit(EXIT_FAILURE);
+    }
+
+    if (ascii_header_set(hdrbuf, "PKT_NTIME", "%" PRIu64 "", PKT_NTIME) < 0)  {
+      fprintf(stderr, "UDP2DB_ERROR: Error setting PKT_NTIME, "
+              "which happens at %s, line [%d].\n",
+              __FILE__, __LINE__);
+      exit(EXIT_FAILURE);
+    }
+
+  if (ascii_header_set(hdrbuf, "NAVERAGE", "%" PRIu64 "", NAVERAGE) < 0)  {
+    fprintf(stderr, "UDP2DB_ERROR: Error setting NAVERAGE, "
+            "which happens at %s, line [%d].\n",
+            __FILE__, __LINE__);
+    exit(EXIT_FAILURE);
+  }
+
   // donot set header parameters anymore
   if(ipcbuf_mark_filled(header_block, DADA_DEFAULT_HEADER_SIZE) < 0){
     fprintf(stderr, "UDP2DB_ERROR: Error header_fill, "
@@ -379,7 +409,6 @@ int main(int argc, char *argv[]){
 	      "which happens at \"%s\", line [%d]\n", 
 	      inet_ntoa(sa.sin_addr), ntohs(sa.sin_port),
 	      __FILE__, __LINE__);
-
       exit(EXIT_FAILURE);
     } // if
 

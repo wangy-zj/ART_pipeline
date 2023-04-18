@@ -13,54 +13,40 @@ __global__ void krnl_unpack(int32_t *input, cuComplex *output, int nsamp, int ch
 }
 
 
-__global__ void krnl_amplitude(float *d_amplitudeOut, cufftComplex *d_fftOut, int NX, int N, int reset){
+__global__ void krnl_amplitude(float *d_amplitudeOut, cufftComplex * d_fftOut, int NX, int N){
   int i = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (i<N){
-    float d_amplitude = cuCabsf(d_fftOut[i]) / NX;
-  }
-
-  if(reset){
-    d_amplitudeOut[i] = d_amplitude;
-  }else{
-    d_amplitudeOut[i] += d_amplitude;
+    d_amplitudeOut[i] = cuCabsf(d_fftOut[i]) / NX;
   }
 }
 
-__global__ void krnl_phase(float * d_divisionOut, cufftComplex *d_fftOut, int N, int reset){
+__global__ void krnl_phase(float * d_divisionOut, cufftComplex *d_fftOut, int N){
   int i = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (i<N){
-    float d_division = atan2f(d_fftOut[i].y, d_fftOut[i].x);
-    if(d_division<0){
-      d_division = d_division + 2*M_PI;
+    d_divisionOut[i] = atan2f(d_fftOut[i].y, d_fftOut[i].x);
+    if(d_divisionOut[i]<0){
+      d_divisionOut[i] = d_divisionOut[i] + 2*M_PI;
     }
-  }
-
-  if(reset){
-    d_divisionOut[i] = d_division;
-  }else{
-    d_divisionOut[i] += d_division;
   }
 }
 
-__global__ void krnl_power_taccumulate_1ant1pol(cuComplex *input, float *output, int nfft, int nchan){
-
-  int ichan = blockIdx.x*blockDim.x + threadIdx.x;
-  if (ichan < nchan){
-    float accumulate = 0;
-    
-    for(int ifft = 0; ifft < nfft; ifft++){
-      int index = ifft*nchan + ichan;
-      float amp = cuCabsf(input[index]);
-      accumulate += (amp*amp); // power, not amp
+__global__ void vectorSum(float *g_idata, float *g_odata){
+  extern __shared__ int sdata[];
+  // each thread loads one element from global to shared mem
+  //unsigned int nchan = 
+  unsigned int tid = threadIdx.x;
+  unsigned int i = blockIdx.x*(blockDim.x*2) + threadIdx.x;
+  sdata[tid] = g_idata[i] / blockDim.x + g_idata[i+blockDim.x]/blockDim.x;
+  __syncthreads();
+  // do reduction in shared mem
+  for(unsigned int s=blockDim.x/2; s >0; s>>=1) {
+    if (tid<s) {
+      sdata[tid] += sdata[tid + s] / blockDim.x;
     }
-
-    // looks like numpy.fft.rfft has the same scaling factor as R2C cufft 
-    if(reset){
-      output[ichan] = accumulate;
-    }else{
-      output[ichan] += accumulate;
-    }
+    __syncthreads();
   }
+  // write result for this block to global mem
+  if (tid == 0) g_odata[blockIdx.x] = sdata[0];
 }
 
 /*

@@ -36,50 +36,22 @@ int read_dada_header(const char *dada_header_buffer, dada_header_t *dada_header)
     exit(EXIT_FAILURE);
   }
 
+  if (ascii_header_get(dada_header_buffer, "UTC_START", "%lf", &dada_header->utc_start) < 0)  {
+    fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting UTC_START, "
+            "which happens at %s, line [%d].\n",
+            __FILE__, __LINE__);
+    exit(EXIT_FAILURE);
+  }
+
+  if (ascii_header_get(dada_header_buffer, "FILE_SIZE", "%lf", &dada_header->file_size) < 0)  {
+    fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting FILE_SIZE, "
+            "which happens at %s, line [%d].\n",
+            __FILE__, __LINE__);
+    exit(EXIT_FAILURE);
+  }
+
   if (ascii_header_get(dada_header_buffer, "NPKT", "%d", &dada_header->npkt) < 0)  {
     fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting NPKT, "
-            "which happens at %s, line [%d].\n",
-            __FILE__, __LINE__);
-    exit(EXIT_FAILURE);
-  }
-
-  if (ascii_header_get(dada_header_buffer, "NELEMENT", "%d", &dada_header->nelement) < 0)  {
-    fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting RECEIVER, "
-            "which happens at %s, line [%d].\n",
-            __FILE__, __LINE__);
-    exit(EXIT_FAILURE);
-  }
-
-  if (ascii_header_get(dada_header_buffer, "NBEAM", "%d", &dada_header->nbeam) < 0)  {
-    fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting BEAM, "
-            "which happens at %s, line [%d].\n",
-            __FILE__, __LINE__);
-    exit(EXIT_FAILURE);
-  }
-
-  if (ascii_header_get(dada_header_buffer, "ZOOM_NCHAN", "%d", &dada_header->zoom_nchan) < 0)  {
-    fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting ZOOM_NCHAN, "
-            "which happens at %s, line [%d].\n",
-            __FILE__, __LINE__);
-    exit(EXIT_FAILURE);
-  }
-
-  if (ascii_header_get(dada_header_buffer, "PKT_HEADER", "%d", &dada_header->pkt_header) < 0)  {
-    fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting PKT_HEADER, "
-            "which happens at %s, line [%d].\n",
-            __FILE__, __LINE__);
-    exit(EXIT_FAILURE);
-  }
-
-  if (ascii_header_get(dada_header_buffer, "PKT_DATA", "%d", &dada_header->pkt_data) < 0)  {
-    fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting PKT_DATA, "
-            "which happens at %s, line [%d].\n",
-            __FILE__, __LINE__);
-    exit(EXIT_FAILURE);
-  }
-
-  if (ascii_header_get(dada_header_buffer, "PKT_NSAMP", "%d", &dada_header->pkt_nsamp) < 0)  {
-    fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting PKT_NSAMP, "
             "which happens at %s, line [%d].\n",
             __FILE__, __LINE__);
     exit(EXIT_FAILURE);
@@ -92,15 +64,8 @@ int read_dada_header(const char *dada_header_buffer, dada_header_t *dada_header)
     exit(EXIT_FAILURE);
   }
 
-  if (ascii_header_get(dada_header_buffer, "PKT_NPOL", "%d", &dada_header->pkt_npol) < 0)  {
-    fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting NPOL, "
-            "which happens at %s, line [%d].\n",
-            __FILE__, __LINE__);
-    exit(EXIT_FAILURE);
-  }
-
-  if (ascii_header_get(dada_header_buffer, "PKT_NBIT", "%d", &dada_header->pkt_nbit) < 0)  {
-    fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting NBIT, "
+  if (ascii_header_get(dada_header_buffer, "PKT_NTIME", "%lf", &dada_header->pkt_ntime) < 0)  {
+    fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting PKT_NTIME, "
             "which happens at %s, line [%d].\n",
             __FILE__, __LINE__);
     exit(EXIT_FAILURE);
@@ -113,15 +78,15 @@ int read_dada_header(const char *dada_header_buffer, dada_header_t *dada_header)
     exit(EXIT_FAILURE);
   }
 
-  if (ascii_header_get(dada_header_buffer, "NAVERAGE_BF", "%d", &dada_header->naverage_bf) < 0)  {
-    fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting NAVERAGE_BF, "
+  if (ascii_header_get(dada_header_buffer, "FREQ", "%lf", &dada_header->freq) < 0)  {
+    fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting FREQ, "
             "which happens at %s, line [%d].\n",
             __FILE__, __LINE__);
     exit(EXIT_FAILURE);
   }
 
-  if (ascii_header_get(dada_header_buffer, "NAVERAGE_ZOOM", "%d", &dada_header->naverage_zoom) < 0)  {
-    fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting NAVERAGE_ZOOM, "
+  if (ascii_header_get(dada_header_buffer, "NAVERAGE", "%d", &dada_header->naverage) < 0)  {
+    fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting NAVERAGE, "
             "which happens at %s, line [%d].\n",
             __FILE__, __LINE__);
     exit(EXIT_FAILURE);
@@ -155,50 +120,22 @@ int write_dada_header(const dada_header_t dada_header, char *dada_header_buffer)
     exit(EXIT_FAILURE);
   }
 
+  if (ascii_header_set(dada_header_buffer, "UTC_START", "%f", dada_header.utc_start) < 0)  {
+    fprintf(stderr, "READ_DADA_HEADER_ERROR: Error setting UTC_START, "
+            "which happens at %s, line [%d].\n",
+            __FILE__, __LINE__);
+    exit(EXIT_FAILURE);
+  }
+
+  if (ascii_header_set(dada_header_buffer, "FILE_SIZE", "%f", dada_header.file_size) < 0)  {
+    fprintf(stderr, "READ_DADA_HEADER_ERROR: Error setting FILE_SIZE, "
+            "which happens at %s, line [%d].\n",
+            __FILE__, __LINE__);
+    exit(EXIT_FAILURE);
+  }
+
   if (ascii_header_set(dada_header_buffer, "NPKT", "%d", dada_header.npkt) < 0)  {
     fprintf(stderr, "READ_DADA_HEADER_ERROR: Error setting NPKT, "
-            "which happens at %s, line [%d].\n",
-            __FILE__, __LINE__);
-    exit(EXIT_FAILURE);
-  }
-
-  if (ascii_header_set(dada_header_buffer, "NELEMENT", "%s", dada_header.nelement) < 0)  {
-    fprintf(stderr, "READ_DADA_HEADER_ERROR: Error setting NELEMENT, "
-            "which happens at %s, line [%d].\n",
-            __FILE__, __LINE__);
-    exit(EXIT_FAILURE);
-  }
-
-  if (ascii_header_set(dada_header_buffer, "NBEAM", "%d", dada_header.nbeam) < 0)  {
-    fprintf(stderr, "READ_DADA_HEADER_ERROR: Error setting NBEAM, "
-            "which happens at %s, line [%d].\n",
-            __FILE__, __LINE__);
-    exit(EXIT_FAILURE);
-  }
-
-  if (ascii_header_set(dada_header_buffer, "ZOOM_NCHAN", "%d", dada_header.zoom_nchan) < 0)  {
-    fprintf(stderr, "READ_DADA_HEADER_ERROR: Error setting ZOOM_NCHAN, "
-            "which happens at %s, line [%d].\n",
-            __FILE__, __LINE__);
-    exit(EXIT_FAILURE);
-  }
-
-  if (ascii_header_set(dada_header_buffer, "PKT_HEADER", "%d", dada_header.pkt_header) < 0)  {
-    fprintf(stderr, "READ_DADA_HEADER_ERROR: Error setting PKT_HEADER, "
-            "which happens at %s, line [%d].\n",
-            __FILE__, __LINE__);
-    exit(EXIT_FAILURE);
-  }
-
-if (ascii_header_set(dada_header_buffer, "PKT_DATA", "%d", dada_header.pkt_data) < 0)  {
-    fprintf(stderr, "READ_DADA_HEADER_ERROR: Error setting PKT_DATA, "
-            "which happens at %s, line [%d].\n",
-            __FILE__, __LINE__);
-    exit(EXIT_FAILURE);
-  }
-
-  if (ascii_header_set(dada_header_buffer, "PKT_NSAMP", "%d", dada_header.pkt_nsamp) < 0)  {
-    fprintf(stderr, "READ_DADA_HEADER_ERROR: Error setting PKT_NSAMP, "
             "which happens at %s, line [%d].\n",
             __FILE__, __LINE__);
     exit(EXIT_FAILURE);
@@ -211,15 +148,8 @@ if (ascii_header_set(dada_header_buffer, "PKT_DATA", "%d", dada_header.pkt_data)
     exit(EXIT_FAILURE);
   }
 
-  if (ascii_header_set(dada_header_buffer, "PKT_NPOL", "%d", dada_header.pkt_npol) < 0)  {
-    fprintf(stderr, "READ_DADA_HEADER_ERROR: Error setting PKT_NPOL, "
-            "which happens at %s, line [%d].\n",
-            __FILE__, __LINE__);
-    exit(EXIT_FAILURE);
-  }
-
-  if (ascii_header_set(dada_header_buffer, "PKT_NBIT", "%d", dada_header.pkt_nbit) < 0)  {
-    fprintf(stderr, "READ_DADA_HEADER_ERROR: Error setting PKT_NBIT, "
+  if (ascii_header_set(dada_header_buffer, "PKT_NTIME", "%f", dada_header.pkt_ntime) < 0)  {
+    fprintf(stderr, "READ_DADA_HEADER_ERROR: Error setting PKT_NTIME, "
             "which happens at %s, line [%d].\n",
             __FILE__, __LINE__);
     exit(EXIT_FAILURE);
@@ -232,15 +162,8 @@ if (ascii_header_set(dada_header_buffer, "PKT_DATA", "%d", dada_header.pkt_data)
     exit(EXIT_FAILURE);
   }
 
-  if (ascii_header_set(dada_header_buffer, "NAVERAGE_BF", "%d", dada_header.naverage_bf) < 0)  {
-    fprintf(stderr, "READ_DADA_HEADER_ERROR: Error setting NAVERAGE_BF, "
-            "which happens at %s, line [%d].\n",
-            __FILE__, __LINE__);
-    exit(EXIT_FAILURE);
-  }
-
-  if (ascii_header_set(dada_header_buffer, "NAVERAGE_ZOOM", "%d", dada_header.naverage_zoom) < 0)  {
-    fprintf(stderr, "READ_DADA_HEADER_ERROR: Error setting NAVERAGE_ZOOM, "
+  if (ascii_header_set(dada_header_buffer, "NAVERAGE", "%d", dada_header.naverage) < 0)  {
+    fprintf(stderr, "READ_DADA_HEADER_ERROR: Error setting NAVERAGE, "
             "which happens at %s, line [%d].\n",
             __FILE__, __LINE__);
     exit(EXIT_FAILURE);

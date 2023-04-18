@@ -62,9 +62,8 @@ int main(int argc, char *argv[]){
   key_t phase_output_key = DADA_DEFAULT_BLOCK_KEY+40;  
   int gpu = 0;
   int nthread_amp = 128;   
-  int nthread_phase = 128;   
-  int reset_amp = 1;
-  int reset_phi = 1;
+  int nthread_phase = 128;
+  int nblocksave = 128;  
   
   while (1) {
     unsigned ss;
@@ -256,15 +255,19 @@ int main(int argc, char *argv[]){
 
   // parse values from header buffer
   int FFTlen = 131072;   // FPGA中FFT的长度
-  int nchan = 1024;    // FFT后选出的通道数
-  int naverage = 1;    // 积分的block数
-  int npkt = 2048;
-  int nsamp = npkt*nchan;
+  int nchan = dada_header.pkt_nchan;    // FFT后选出的通道数
+  int naverage = dada_header.naverage;    // 积分的block数
+  //int ntime = dada_header.pkt_ntime;
+  int ntime = 1;
+  int npkt = dada_header.npkt;
+  int nsamp = npkt*nchan*ntime;
+
+  fprintf(stdout, "DEBUG: nsamp = %x, npkt = %x, ntime = %x \n", nsamp, npkt, ntime);
 
   // Need to check it against expected value here
-  int input_dbuf_size = nchan * sizeof(cufftComplex);   // 输入为FFT后的实部虚部
-  int amplitude_dbuf_size = nchan * sizeof(float);   // 输出幅度
-  int phase_dbuf_size = nchan * sizeof(float);   // 输出相位
+  int input_dbuf_size = nsamp * sizeof(int32_t) * 2;   // 输入为FFT后的实部虚部
+  int amplitude_dbuf_size = nsamp * sizeof(float) / naverage;   // 输出幅度,积分之后
+  int phase_dbuf_size = nsamp * sizeof(float) / naverage;   // 输出相位,积分之后
   
   unsigned bytes_block_input  = ipcbuf_get_bufsz(input_dblock);
   unsigned bytes_block_amplitude = ipcbuf_get_bufsz(amplitude_output_dblock);  
@@ -313,7 +316,7 @@ int main(int argc, char *argv[]){
   // We update file size
   // a single buffer block per file
   // BYTES_PER_SECOND also need update, but ignore it for now
-  if (ascii_header_set(amplitude_hbuf, "FILE_SIZE", "%d", bytes_block_amplitude) < 0)  {
+  if (ascii_header_set(amplitude_hbuf, "FILE_SIZE", "%d", bytes_block_amplitude*nblocksave) < 0)  {
     fprintf(stderr, "PROCESS_ERROR:\tError setting FILE_SIZE, "
 	    "which happens at \"%s\", line [%d].\n",
 	    __FILE__, __LINE__);
@@ -326,7 +329,7 @@ int main(int argc, char *argv[]){
   // We update file size
   // a single buffer block per file
   // BYTES_PER_SECOND also need update, but ignore it for now
-  if (ascii_header_set(phase_hbuf, "FILE_SIZE", "%d", bytes_block_phase) < 0)  {
+  if (ascii_header_set(phase_hbuf, "FILE_SIZE", "%d", bytes_block_phase*nblocksave) < 0)  {
     fprintf(stderr, "PROCESS_ERROR:\tError setting FILE_SIZE, "
 	    "which happens at \"%s\", line [%d].\n",
 	    __FILE__, __LINE__);
@@ -338,7 +341,8 @@ int main(int argc, char *argv[]){
   ipcbuf_mark_filled(phase_output_hblock, DADA_DEFAULT_HEADER_SIZE);
 
   // Setup kernel dims
-  dim3 grid_unpack(nsamp/128+1);
+  dim3 grid_unpack(nsamp/nchan+1);
+  dim3 grid_int(nsamp/nchan+1);
   dim3 blck_amp(1, 1);
   dim3 grid_amp(1, 1);
   dim3 blck_phi(1, 1);
@@ -347,6 +351,7 @@ int main(int argc, char *argv[]){
   grid_amp.x = (nchan - 1 + blck_amp.x) / blck_amp.x;
 	blck_phi.x = nthread_phase;  
   grid_phi.x = (nchan - 1 + blck_phi.x) / blck_phi.x;
+  
 
   // Setup cuda buffers
 
@@ -357,12 +362,13 @@ int main(int argc, char *argv[]){
 	/* 声明并开辟GPU相关变量内存 */
   int32_t *d_input;
   cuComplex *d_unpack;
-  float *d_amplitude, *d_phase;
+  float *d_amplitude, *d_phase, *out_amplitude, *out_phase;
 	checkCudaErrors(cudaMalloc(&d_input, nsamp * 2 * sizeof(int32_t)));
   checkCudaErrors(cudaMalloc(&d_unpack, nsamp * sizeof(cuComplex)));
 	checkCudaErrors(cudaMalloc(&d_amplitude, nsamp * sizeof(float)));
+  checkCudaErrors(cudaMalloc(&out_amplitude, nsamp * sizeof(float)/naverage));
 	checkCudaErrors(cudaMalloc(&d_phase, nsamp * sizeof(float)));
-
+  checkCudaErrors(cudaMalloc(&out_phase, nsamp * sizeof(float)/naverage));
   // fprintf(stdout, "PROCESS_INFO:\t device input buffer size is %lud bytes\n", pkt_nsamp*sizeof(int8_t));
   
   print_cuda_memory_info();
@@ -407,68 +413,60 @@ int main(int argc, char *argv[]){
     }
     
     CUDA_STARTTIME(memcpyh2d);  
-    checkCudaErrors(cudaMemcpy(d_input, input_cbuf,npkt * nchan * sizeof(int32_t), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_input, input_cbuf, npkt * nchan * sizeof(int32_t), cudaMemcpyHostToDevice));
     CUDA_STOPTIME(memcpyh2d);  
     ipcbuf_mark_cleared(input_dblock);
     fprintf(stdout, "Memory copy from host to device of %d block done\n", nblock);
 
     /* 解析输入数据 */
-    krnl_unpack<<<grid_unpack, 128>>>(d_input,d_unpack,nsamp,chan)
+    krnl_unpack<<<grid_unpack, 128>>>(d_input,d_unpack,nsamp,nchan);
+    getLastCudaError("Kernel execution failed [ unpack input data ]");
     
     /* 计算幅度 */
-    krnl_amplitude<<<grid_amp, blck_amp>>>(d_amplitude, d_input, FFTlen, nchan, reset_amp);
-    getLastCudaError("Kernel execution failed [ amplitude ]");
+    krnl_amplitude<<<grid_amp, blck_amp>>>(d_amplitude, d_unpack, FFTlen, nchan);
+    getLastCudaError("Kernel execution failed [ amplitude computing ]");
 
     /* 计算相位 */
-    krnl_phase<<<grid_phi, blck_phi>>>(d_phase, d_input, nchan, reset_phi);
-    getLastCudaError("Kernel execution failed [ phase ]");
+    krnl_phase<<<grid_phi, blck_phi>>>(d_phase, d_unpack, nchan);
+    getLastCudaError("Kernel execution failed [ phase computing ]");
 
-    //krnl_integral<<<grid_integral, 128>>>(d_phase, out_phase, reset_phi)
+    /* 幅度积分 */
+    vectorSum<<<grid_int, 128>>>(d_amplitude, out_amplitude);
+    getLastCudaError("Kernel execution failed [ amplitude integration ]");
+
+    /*相位积分 */
+    vectorSum<<<grid_int, 128>>>(d_phase, out_phase);
+    getLastCudaError("Kernel execution failed [ phase integration ]");
 
     nblock++;
-    if(nblock % naverage == 0){
-      reset_amp = 1;
-    
-      //// we copy data to ring buffer only when we get naverage blocks done
-      //// block memory copy
-      //// We will not get any output if the runtime is short than integration time
-      char *output_amplitude = ipcbuf_get_next_write(amplitude_output_dblock);
-      if(!output_amplitude){
-      	fprintf(stderr, "Could not get next amplitude write data block\n");
-      	exit(EXIT_FAILURE);
-      }
-      CUDA_STARTTIME(memcpyd2h);  
-      checkCudaErrors(cudaMemcpy(output_amplitude, d_amplitude, bytes_block_amplitude, cudaMemcpyDeviceToHost));
-      CUDA_STOPTIME(memcpyd2h);  
-      ipcbuf_mark_filled(amplitude_output_dblock, bytes_block_amplitude);
+    //// we copy data to ring buffer only when we get naverage blocks done
+    //// block memory copy
+    //// We will not get any output if the runtime is short than integration time
+    char *output_amplitude = ipcbuf_get_next_write(amplitude_output_dblock);
+    if(!output_amplitude){
+      fprintf(stderr, "Could not get next amplitude write data block\n");
+      exit(EXIT_FAILURE);
+    }
+    CUDA_STARTTIME(memcpyd2h);  
+    checkCudaErrors(cudaMemcpy(output_amplitude, out_amplitude, bytes_block_amplitude, cudaMemcpyDeviceToHost));
+    CUDA_STOPTIME(memcpyd2h);  
+    ipcbuf_mark_filled(amplitude_output_dblock, bytes_block_amplitude);
 
-      fprintf(stdout, "we copy data out\n");
-    }
-    else{
-      reset_amp = 0;
-    }
+    fprintf(stdout, "we copy amplitude data out\n");
 
-    if(nblock % naverage == 0){
-      reset_phi = 1;
-    
-      //// we copy data to ring buffer only when we get naverage blocks done
-      //// block memory copy
-      //// We will not get any output if the runtime is short than integration time
-      char *output_phase = ipcbuf_get_next_write(phase_output_dblock);
-      if(!output_phase){
-      	fprintf(stderr, "Could not get next phase write data block\n");
-      	exit(EXIT_FAILURE);
-      }
-      CUDA_STARTTIME(memcpyd2h);  
-      checkCudaErrors(cudaMemcpy(output_phase, d_phase, bytes_block_phase, cudaMemcpyDeviceToHost));
-      CUDA_STOPTIME(memcpyd2h);  
-      ipcbuf_mark_filled(phase_output_dblock, bytes_block_phase);
+    char *output_phase = ipcbuf_get_next_write(phase_output_dblock);
+    if(!output_phase){
+      fprintf(stderr, "Could not get next phase write data block\n");
+      exit(EXIT_FAILURE);
+    }
+    CUDA_STARTTIME(memcpyd2h);  
+    checkCudaErrors(cudaMemcpy(output_phase, out_phase, bytes_block_phase, cudaMemcpyDeviceToHost));
+    CUDA_STOPTIME(memcpyd2h);  
+    ipcbuf_mark_filled(phase_output_dblock, bytes_block_phase);
 
-      fprintf(stdout, "we copy data out\n");
-    }
-    else{
-      reset_phi = 0;
-    }
+    fprintf(stdout, "we copy phase data out\n"); 
+
+ 
 
   //   /* 存储幅度数据到.txt文件 */
   //   checkCudaErrors(cudaMemcpy(amplitude, d_amplitude, bytes_block_amplitude, cudaMemcpyDeviceToHost));

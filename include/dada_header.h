@@ -11,19 +11,14 @@ extern "C" {
 
   typedef struct dada_header_t{
     double mjd_start;
+    char utc_start;
+    int file_size;
     int npkt;
-    int nelement;
-    int nbeam;
-    int zoom_nchan;
-    int pkt_header;
-    int pkt_data;
-    int pkt_nsamp;
     int pkt_nchan;
-    int pkt_npol;
-    int pkt_nbit;
+    int pkt_ntime;
     double pkt_tsamp;
-    int naverage_bf;
-    int naverage_zoom;
+    double freq;
+    int naverage;
   }dada_header_t;
 
   int read_dada_header(const char *dada_header_buffer, dada_header_t *dada_header);
