@@ -41,7 +41,8 @@
 // define network interfaces
 //#define IP_SEND     "192.168.2.20"
 //#define IP_RECV     "192.168.2.90"
-//#define IP_SEND     "10.17.4.2"
+//#define IP_SEND     "10.17.4.2"*/**
+
 //#define IP_RECV     "10.17.4.2"
 #define IP_SEND     "10.11.4.54"
 #define IP_RECV     "10.11.4.54"
@@ -59,9 +60,10 @@ const uint32_t nsleep_dead = 45;  ///< Estimated dead time of sleep
 const int nsecond_report   = 1;   ///< Report traffic status every second
 
 // packet header has a one-byte flag and a 7-bytes counter
+// udp 包头，包含counter和flag（AD序号），根据实际情况修改
 typedef struct packet_header_t{
-  uint64_t flag : 8;
-  uint64_t counter : 56; // for 512 MHz bandwidth, it could cover about 800 days???
+  //uint64_t flag : 8;
+  uint64_t counter : 64; // for 512 MHz bandwidth, it could cover about 800 days???
 }packet_header_t;
 
 void catch_int(int sig_num);

@@ -44,15 +44,16 @@ WORK_ROOT=/home/hero/code
 project_root=$WORK_ROOT/ART_pipeline
 hdr_root=$project_root/header
 udp_command=$project_root/build/udp/udp2db
+data_raw_dir=/home/hero/data/data_raw
 
 $echo "project_root is: $project_root"
 $echo "hdr_root is:     $hdr_root"
 $echo "udp_command is:  $udp_command\n"
 
 # setup dada buffer
-pkt_dtsz=8192
+pkt_dtsz=8000
 nstream_gpu=1
-npkt=2048
+npkt=1000
 numa=0
 key=a000
 bufsz=$(( pkt_dtsz*nstream_gpu*npkt ))
@@ -72,14 +73,14 @@ $echo "created all ring buffers\n"
 
 # setup data consumers
 #dada_dbnull -k $key -z &
-dada_dbdisk -k $key -D . -W &
+dada_dbdisk -k $key -D $data_raw_dir -W &
 pids+=(`echo $! `)
 $echo "had the data consumer up\n"
 
 # setup tests
 hdr_fname=$hdr_root/art_test.header
-nblock=1
-nsecond=10
+nblock=100
+nsecond=20
 freq=1420
 
 $echo "hdr_fname is: $hdr_fname"

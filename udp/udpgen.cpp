@@ -194,7 +194,7 @@ int main(int argc, char *argv[]){
     tsadd( &start, &sleep, &then );
 
     for(int i = 0; i < NSTREAM_UDP; i++){
-      packet_header->flag = AD0+i;
+      //packet_header->flag = AD0+i;
       sendto(socks[i], buf, PKTSZ, 0, (struct sockaddr *)&dest, dest_len);
     }
     packet_header->counter++;

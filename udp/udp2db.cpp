@@ -16,6 +16,8 @@
 
 //#define DEBUG
 
+
+
 int main(int argc, char *argv[]){
 
   signal(SIGINT, catch_int);
@@ -414,7 +416,7 @@ int main(int argc, char *argv[]){
 
     packet_header_t *packet_header = (packet_header_t *)dbuf;
     uint64_t counter = packet_header->counter;
-    uint64_t ad      = packet_header->flag - AD0;
+    //uint64_t ad      = packet_header->flag - AD0;   //如果只有一个ad，去掉本行
     
 #ifdef DEBUG
     fprintf(stdout, "UDP2DB_DEBUG: counter is %" PRIu64 ", and from %s_%d at \"%s\", line [%d]\n",
@@ -422,8 +424,10 @@ int main(int argc, char *argv[]){
 #endif
 
     int diff_counter = counter - counter0;
-    int loc_packet   = diff_counter*NSTREAM_UDP+ad;  //包位置信息，考虑到不同ad的包
-    
+    int loc_packet   = diff_counter*NSTREAM_UDP;  //包位置信息，考虑到不同ad的包
+    fprintf(stdout,"counter is %" PRIu64 ", counter0 is %" PRIu64 ", diff_counter is %d\n",counter,counter0,diff_counter);
+    //int loc_packet   = diff_counter*NSTREAM_UDP+ad;
+
     // We only cope with packet loss within a single buffer block
     if(diff_counter >= npacket){
       ipcbuf_mark_filled(data_block, bufsz); // Open a ring buffer block
