@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 #endif
 
+#include <byteswap.h>
 #include <getopt.h>
 #include <assert.h>
 #include <string.h>
@@ -189,7 +190,8 @@ int main(int argc, char *argv[]){
   packet_header_t *packet_header = (packet_header_t *)dbuf;
   // this will discard the first time stamp
   // we need it when there is multiple data streams to make traffic report looks better
-  uint64_t counter = packet_header->counter + 1; 
+  //uint64_t counter = (bswap_64(packet_header->counter))+ 1;
+  uint64_t counter = packet_header->counter+ 1;
   fprintf(stdout, "UDP2DB_INFO: counter is %" PRIu64 "\n", counter);
   
   /***************************
@@ -425,7 +427,7 @@ int main(int argc, char *argv[]){
 
     int diff_counter = counter - counter0;
     int loc_packet   = diff_counter*NSTREAM_UDP;  //包位置信息，考虑到不同ad的包
-    fprintf(stdout,"counter is %" PRIu64 ", counter0 is %" PRIu64 ", diff_counter is %d\n",counter,counter0,diff_counter);
+    //fprintf(stdout,"counter is %" PRIu64 ", counter0 is %" PRIu64 ", diff_counter is %d\n",counter,counter0,diff_counter);
     //int loc_packet   = diff_counter*NSTREAM_UDP+ad;
 
     // We only cope with packet loss within a single buffer block

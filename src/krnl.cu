@@ -35,12 +35,12 @@ __global__ void vectorSum(float *g_idata, float *g_odata){
   // each thread loads one element from global to shared mem
   //unsigned int nchan = 
   unsigned int tid = threadIdx.x;
-  unsigned int i = blockIdx.x*(blockDim.x*2) + threadIdx.x;
-  sdata[tid] = g_idata[i] / blockDim.x + g_idata[i+blockDim.x]/blockDim.x;
+  unsigned int i = blockIdx.x + gridDim.x * threadIdx.x;
+  sdata[tid] = g_idata[i]/blockDim.x;
   __syncthreads();
   // do reduction in shared mem
-  for(unsigned int s=blockDim.x/2; s >0; s>>=1) {
-    if (tid<s) {
+  for(unsigned int s=1;s<blockDim.x;s*=2) {
+    if (tid%(2*s)==0) {
       sdata[tid] += sdata[tid + s] / blockDim.x;
     }
     __syncthreads();

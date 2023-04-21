@@ -262,7 +262,7 @@ int main(int argc, char *argv[]){
   int npkt = dada_header.npkt;
   int nsamp = npkt*nchan*ntime;
 
-  fprintf(stdout, "DEBUG: nsamp = %x, npkt = %x, ntime = %x \n", nsamp, npkt, ntime);
+  fprintf(stdout, "DEBUG: nsamp = %d, npkt = %d, ntime = %d \n", nsamp, npkt, ntime);
 
   // Need to check it against expected value here
   int input_dbuf_size = nsamp * sizeof(int32_t) * 2;   // 输入为FFT后的实部虚部
@@ -369,8 +369,7 @@ int main(int argc, char *argv[]){
   checkCudaErrors(cudaMalloc(&out_amplitude, nsamp * sizeof(float)/naverage));
 	checkCudaErrors(cudaMalloc(&d_phase, nsamp * sizeof(float)));
   checkCudaErrors(cudaMalloc(&out_phase, nsamp * sizeof(float)/naverage));
-  // fprintf(stdout, "PROCESS_INFO:\t device input buffer size is %lud bytes\n", pkt_nsamp*sizeof(int8_t));
-  
+  //int outmem = nsamp * sizeof(float)/naverage;
   print_cuda_memory_info();
 
   // Setup timer
@@ -421,7 +420,7 @@ int main(int argc, char *argv[]){
     /* 解析输入数据 */
     krnl_unpack<<<grid_unpack, 128>>>(d_input,d_unpack,nsamp,nchan);
     getLastCudaError("Kernel execution failed [ unpack input data ]");
-    
+
     /* 计算幅度 */
     krnl_amplitude<<<grid_amp, blck_amp>>>(d_amplitude, d_unpack, FFTlen, nchan);
     getLastCudaError("Kernel execution failed [ amplitude computing ]");
@@ -437,7 +436,7 @@ int main(int argc, char *argv[]){
     /*相位积分 */
     vectorSum<<<grid_int, 128>>>(d_phase, out_phase);
     getLastCudaError("Kernel execution failed [ phase integration ]");
-
+    fprintf(stderr, "computing done!\n");
     nblock++;
     //// we copy data to ring buffer only when we get naverage blocks done
     //// block memory copy

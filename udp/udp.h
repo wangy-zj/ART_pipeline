@@ -59,10 +59,9 @@ const struct timeval tout  = {0, 0};
 const uint32_t nsleep_dead = 45;  ///< Estimated dead time of sleep
 const int nsecond_report   = 1;   ///< Report traffic status every second
 
-// packet header has a one-byte flag and a 7-bytes counter
 // udp 包头，包含counter和flag（AD序号），根据实际情况修改
 typedef struct packet_header_t{
-  //uint64_t flag : 8;
+  //uint64_t flag : 0;
   uint64_t counter : 64; // for 512 MHz bandwidth, it could cover about 800 days???
 }packet_header_t;
 
