@@ -6,34 +6,28 @@
 
 
 __global__ void krnl_unpack(int32_t *input, cuComplex *output, int nsamp, int chan){
-  int index = blockIdx.x * blockDim.x + threadIdx.x;
-  if(index<nsamp*chan && index%2==0){
-    output[index] = make_cuFloatComplex((float)input[index],(float)input[index+1]);
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int index = i*2;
+  if(index<nsamp*chan*2){
+    output[i] = make_cuFloatComplex((float)input[index],(float)input[index+1]);
   }
 }
 
 
-__global__ void krnl_amplitude(float *d_amplitudeOut, cufftComplex * d_fftOut, int NX, int N){
+__global__ void krnl_amplitude_phase(float *d_amplitudeOut, float * d_divisionOut, cufftComplex * d_fftOut, int NX, int N){
   int i = (blockIdx.x * blockDim.x) + threadIdx.x;
   if (i<N){
     d_amplitudeOut[i] = cuCabsf(d_fftOut[i]) / NX;
-  }
-}
-
-__global__ void krnl_phase(float * d_divisionOut, cufftComplex *d_fftOut, int N){
-  int i = (blockIdx.x * blockDim.x) + threadIdx.x;
-  if (i<N){
     d_divisionOut[i] = atan2f(d_fftOut[i].y, d_fftOut[i].x);
-    if(d_divisionOut[i]<0){
-      d_divisionOut[i] = d_divisionOut[i] + 2*M_PI;
-    }
+  }
+  if(d_divisionOut[i]<0){
+    d_divisionOut[i] += 2*M_PI;
   }
 }
 
 __global__ void vectorSum(float *g_idata, float *g_odata){
   extern __shared__ int sdata[];
   // each thread loads one element from global to shared mem
-  //unsigned int nchan = 
   unsigned int tid = threadIdx.x;
   unsigned int i = blockIdx.x + gridDim.x * threadIdx.x;
   sdata[tid] = g_idata[i]/blockDim.x;

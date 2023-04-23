@@ -269,16 +269,16 @@ int main(int argc, char *argv[]){
   int amplitude_dbuf_size = nsamp * sizeof(float) / naverage;   // 输出幅度,积分之后
   int phase_dbuf_size = nsamp * sizeof(float) / naverage;   // 输出相位,积分之后
   
-  unsigned bytes_block_input  = ipcbuf_get_bufsz(input_dblock);
-  unsigned bytes_block_amplitude = ipcbuf_get_bufsz(amplitude_output_dblock);  
-  unsigned bytes_block_phase = ipcbuf_get_bufsz(phase_output_dblock);  
+  uint64_t bytes_block_input  = ipcbuf_get_bufsz(input_dblock);
+  uint64_t bytes_block_amplitude = ipcbuf_get_bufsz(amplitude_output_dblock);  
+  uint64_t bytes_block_phase = ipcbuf_get_bufsz(phase_output_dblock);  
 
-  fprintf(stdout, "PROCESS_INFO:\tinput buffer block size is %d bytes, output buffer block size is %d bytes\n",
-	  bytes_block_input, bytes_block_amplitude);
+  fprintf(stdout, "PROCESS_INFO:\tinput buffer block size is %" PRId64 " bytes, amplitude buffer block size is %" PRId64 " bytes, phase buffer block size is %" PRId64 " bytes\n",
+	  bytes_block_input, bytes_block_amplitude, bytes_block_phase);
   
   if (bytes_block_input!=input_dbuf_size){
     fprintf(stderr, "PROCESS_ERROR:\tinput buffer block size mismatch, "
-	    "%d vs %d "
+	    "%" PRId64 "vs %d "
 	    "which happens at \"%s\", line [%d], has to abort.\n",
 	    bytes_block_input, input_dbuf_size,
 	    __FILE__, __LINE__);	
@@ -289,7 +289,7 @@ int main(int argc, char *argv[]){
 
   if (bytes_block_amplitude!=amplitude_dbuf_size){
     fprintf(stderr, "PROCESS_ERROR:\tamplitude output buffer block size mismatch, "
-	    "%d vs %d "
+	    "%" PRId64 "vs %d "
 	    "which happens at \"%s\", line [%d], has to abort.\n",
 	    bytes_block_amplitude, amplitude_dbuf_size,
 	    __FILE__, __LINE__);	
@@ -300,7 +300,7 @@ int main(int argc, char *argv[]){
 
   if (bytes_block_phase!=phase_dbuf_size){
     fprintf(stderr, "PROCESS_ERROR:\tphase output buffer block size mismatch, "
-	    "%d vs %d "
+	    "%" PRId64 " vs %d "
 	    "which happens at \"%s\", line [%d], has to abort.\n",
 	    bytes_block_phase, phase_dbuf_size,
 	    __FILE__, __LINE__);	
@@ -341,6 +341,7 @@ int main(int argc, char *argv[]){
   ipcbuf_mark_filled(phase_output_hblock, DADA_DEFAULT_HEADER_SIZE);
 
   // Setup kernel dims
+  /*
   dim3 grid_unpack(nsamp/nchan+1);
   dim3 grid_int(nsamp/nchan+1);
   dim3 blck_amp(1, 1);
@@ -351,7 +352,7 @@ int main(int argc, char *argv[]){
   grid_amp.x = (nchan - 1 + blck_amp.x) / blck_amp.x;
 	blck_phi.x = nthread_phase;  
   grid_phi.x = (nchan - 1 + blck_phi.x) / blck_phi.x;
-  
+  */
 
   // Setup cuda buffers
 
@@ -396,7 +397,7 @@ int main(int argc, char *argv[]){
 
   int nblock = 0;
   
-  // FILE *fp1 = fopen("/home/hero/Desktop/ART-pipeline/amplitude.txt", "w");   // 存储幅度数据到.txt文件方便自己查看结果
+  // FILE *fp1 = fopen("/home/hero/Desktop/ART-pipeline/amplitude.txt", "w");   // 存储npkt幅度数据到.txt文件方便自己查看结果
   // FILE *fp2 = fopen("/home/hero/Desktop/ART-pipeline/phase.txt", "w");   // 存储相位数据到.txt文件方便自己查看结果
 
   CUDA_STARTTIME(pipeline);  
@@ -405,7 +406,9 @@ int main(int argc, char *argv[]){
     fprintf(stdout, "We are at %d block\n", nblock);
 
     // block memory copy
-    char *input_cbuf = ipcbuf_get_next_read(input_dblock, NULL);
+    //int64_t dindex = ipcbuf_get_read_index(input_dblock);
+    //fprintf(stdout, "the offset is %" PRId64 "\n", dindex);
+    char *input_cbuf = ipcbuf_get_next_read(input_dblock, &bytes_block_input);
     if(!input_cbuf){
       fprintf(stderr, "Could not get next read data block\n");
       exit(EXIT_FAILURE);
@@ -418,25 +421,21 @@ int main(int argc, char *argv[]){
     fprintf(stdout, "Memory copy from host to device of %d block done\n", nblock);
 
     /* 解析输入数据 */
-    krnl_unpack<<<grid_unpack, 128>>>(d_input,d_unpack,nsamp,nchan);
+    krnl_unpack<<<nchan, npkt>>>(d_input,d_unpack,nsamp,nchan);
     getLastCudaError("Kernel execution failed [ unpack input data ]");
 
-    /* 计算幅度 */
-    krnl_amplitude<<<grid_amp, blck_amp>>>(d_amplitude, d_unpack, FFTlen, nchan);
+    /* 计算幅度和相位 */
+    krnl_amplitude_phase<<<nchan, npkt>>>(d_amplitude,d_phase, d_unpack, FFTlen, nchan);
     getLastCudaError("Kernel execution failed [ amplitude computing ]");
 
-    /* 计算相位 */
-    krnl_phase<<<grid_phi, blck_phi>>>(d_phase, d_unpack, nchan);
-    getLastCudaError("Kernel execution failed [ phase computing ]");
-
     /* 幅度积分 */
-    vectorSum<<<grid_int, 128>>>(d_amplitude, out_amplitude);
+    vectorSum<<<nchan, naverage>>>(d_amplitude, out_amplitude);
     getLastCudaError("Kernel execution failed [ amplitude integration ]");
 
     /*相位积分 */
-    vectorSum<<<grid_int, 128>>>(d_phase, out_phase);
+    vectorSum<<<nchan, naverage>>>(d_phase, out_phase);
     getLastCudaError("Kernel execution failed [ phase integration ]");
-    fprintf(stderr, "computing done!\n");
+    //fprintf(stderr, "computing done!\n");
     nblock++;
     //// we copy data to ring buffer only when we get naverage blocks done
     //// block memory copy
@@ -451,7 +450,7 @@ int main(int argc, char *argv[]){
     CUDA_STOPTIME(memcpyd2h);  
     ipcbuf_mark_filled(amplitude_output_dblock, bytes_block_amplitude);
 
-    fprintf(stdout, "we copy amplitude data out\n");
+    //fprintf(stdout, "we copy amplitude data out\n");
 
     char *output_phase = ipcbuf_get_next_write(phase_output_dblock);
     if(!output_phase){
@@ -463,7 +462,7 @@ int main(int argc, char *argv[]){
     CUDA_STOPTIME(memcpyd2h);  
     ipcbuf_mark_filled(phase_output_dblock, bytes_block_phase);
 
-    fprintf(stdout, "we copy phase data out\n"); 
+    fprintf(stdout, "we copy amplitude and phase data out\n"); 
 
  
 
@@ -483,6 +482,7 @@ int main(int argc, char *argv[]){
   
   // fclose(fp1);
   // fclose(fp2);
+  
 
   CUDA_STOPTIME(pipeline);
 
@@ -490,14 +490,33 @@ int main(int argc, char *argv[]){
   fprintf(stdout, "pipeline   %f milliseconds, memory transfer h2d averaged with %d blocks\n", memcpyh2dtime/(float)nblock, nblock);
   fprintf(stdout, "pipeline   %f milliseconds, memory transfer d2h averaged with %d blocks\n", memcpyd2htime/(float)nblock, nblock);
   
-  dada_hdu_unlock_read(input_hdu);
-  dada_hdu_unlock_write(amplitude_output_hdu);
-  dada_hdu_unlock_write(phase_output_hdu);
+  if(dada_hdu_unlock_read(input_hdu) < 0) {
+    fprintf(stderr, "PROCESS_ERROR:\tError unlocking input HDU, \n"
+	    "which happens at \"%s\", line [%d], has to abort.\n",
+	    __FILE__, __LINE__);
+      
+    exit(EXIT_FAILURE);
+  }
+
+  if(dada_hdu_unlock_write(amplitude_output_hdu) < 0) {
+    fprintf(stderr, "PROCESS_ERROR:\tError unlocking amplitude output HDU, \n"
+	    "which happens at \"%s\", line [%d], has to abort.\n",
+	    __FILE__, __LINE__);
+      
+    exit(EXIT_FAILURE);
+  }
+
+  if(dada_hdu_unlock_write(phase_output_hdu) < 0) {
+    fprintf(stderr, "PROCESS_ERROR:\tError unlocking phase output HDU, \n"
+	    "which happens at \"%s\", line [%d], has to abort.\n",
+	    __FILE__, __LINE__);
+      
+    exit(EXIT_FAILURE);
+  }
 
   dada_hdu_destroy(input_hdu);
   dada_hdu_destroy(amplitude_output_hdu);
   dada_hdu_destroy(phase_output_hdu);
 
-  
   return EXIT_SUCCESS;
 }    

@@ -44,9 +44,7 @@
 */
 __global__ void krnl_unpack(int32_t *input, cuComplex *output, int nsamp, int chan);
 
-__global__ void krnl_amplitude(float *d_amplitude, cuComplex *d_input, int FFTlen, int nchan);
-
-__global__ void krnl_phase (float *d_phase, cuComplex *d_input, int nchan);
+__global__ void krnl_amplitude_phase(float *d_amplitude, float * d_divisionOut, cuComplex *d_input, int FFTlen, int nchan);
 
 __global__ void vectorSum(float *g_idata, float *g_odata);
 /*!
