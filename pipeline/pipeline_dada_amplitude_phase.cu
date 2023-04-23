@@ -415,7 +415,7 @@ int main(int argc, char *argv[]){
     }
     
     CUDA_STARTTIME(memcpyh2d);  
-    checkCudaErrors(cudaMemcpy(d_input, input_cbuf, npkt * nchan * sizeof(int32_t), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_input, input_cbuf, bytes_block_input, cudaMemcpyHostToDevice));
     CUDA_STOPTIME(memcpyh2d);  
     ipcbuf_mark_cleared(input_dblock);
     fprintf(stdout, "Memory copy from host to device of %d block done\n", nblock);
@@ -440,44 +440,41 @@ int main(int argc, char *argv[]){
     //// we copy data to ring buffer only when we get naverage blocks done
     //// block memory copy
     //// We will not get any output if the runtime is short than integration time
+    CUDA_STARTTIME(memcpyd2h); 
     char *output_amplitude = ipcbuf_get_next_write(amplitude_output_dblock);
     if(!output_amplitude){
       fprintf(stderr, "Could not get next amplitude write data block\n");
       exit(EXIT_FAILURE);
     }
-    CUDA_STARTTIME(memcpyd2h);  
     checkCudaErrors(cudaMemcpy(output_amplitude, out_amplitude, bytes_block_amplitude, cudaMemcpyDeviceToHost));
-    CUDA_STOPTIME(memcpyd2h);  
     ipcbuf_mark_filled(amplitude_output_dblock, bytes_block_amplitude);
 
-    //fprintf(stdout, "we copy amplitude data out\n");
 
     char *output_phase = ipcbuf_get_next_write(phase_output_dblock);
     if(!output_phase){
       fprintf(stderr, "Could not get next phase write data block\n");
       exit(EXIT_FAILURE);
     }
-    CUDA_STARTTIME(memcpyd2h);  
     checkCudaErrors(cudaMemcpy(output_phase, out_phase, bytes_block_phase, cudaMemcpyDeviceToHost));
-    CUDA_STOPTIME(memcpyd2h);  
     ipcbuf_mark_filled(phase_output_dblock, bytes_block_phase);
+    CUDA_STOPTIME(memcpyd2h);
 
     fprintf(stdout, "we copy amplitude and phase data out\n"); 
 
  
 
-  //   /* 存储幅度数据到.txt文件 */
-  //   checkCudaErrors(cudaMemcpy(amplitude, d_amplitude, bytes_block_amplitude, cudaMemcpyDeviceToHost));
-  //   // fwrite(amplitude, sizeof(float), nchan, fp1);   // 写入二进制数据
-  //   for (int i = 0; i < nchan; i++) {
-  //     fprintf(fp1, "%f \n", amplitude[i]);
-  //   }
-  //   /* 存储相位数据到.txt文件 */
-  //   checkCudaErrors(cudaMemcpy(phase, d_phase, bytes_block_phase, cudaMemcpyDeviceToHost));
-  //   // fwrite(phase, sizeof(float), nchan, fp2);   // 写入二进制数据
-  //   for (int i = 0; i < nchan; i++) {
-  //     fprintf(fp2, "%f \n", phase[i]);
-  //   }
+     /* 存储幅度数据到.txt文件 
+     checkCudaErrors(cudaMemcpy(amplitude, d_amplitude, bytes_block_amplitude, cudaMemcpyDeviceToHost));
+     // fwrite(amplitude, sizeof(float), nchan, fp1);   // 写入二进制数据
+     for (int i = 0; i < nchan; i++) {
+       fprintf(fp1, "%f \n", amplitude[i]);
+     }
+     checkCudaErrors(cudaMemcpy(phase, d_phase, bytes_block_phase, cudaMemcpyDeviceToHost));
+     // fwrite(phase, sizeof(float), nchan, fp2);   // 写入二进制数据
+     for (int i = 0; i < nchan; i++) {
+       fprintf(fp2, "%f \n", phase[i]);
+     }
+     */
   }
   
   // fclose(fp1);
