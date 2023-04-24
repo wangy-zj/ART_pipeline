@@ -46,7 +46,7 @@ __global__ void krnl_unpack(int32_t *input, cuComplex *output, int nsamp, int ch
 
 __global__ void krnl_amplitude_phase(float *d_amplitude, float * d_divisionOut, cuComplex *d_input, int FFTlen, int nchan);
 
-__global__ void vectorSum(float *g_idata, float *g_odata);
+__global__ void vectorSum(float *g_idata, float *g_odata, int naverage);
 /*!
   This kernel is purely for the transpose of [NFFT-NCHAN] data into [NCHAN-NFFT]
   n: NCHAN

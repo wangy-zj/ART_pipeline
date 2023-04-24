@@ -25,22 +25,38 @@ __global__ void krnl_amplitude_phase(float *d_amplitudeOut, float * d_divisionOu
   }
 }
 
+/*
 __global__ void vectorSum(float *g_idata, float *g_odata){
   extern __shared__ int sdata[];
   // each thread loads one element from global to shared mem
+  //unsigned int tid = blockDim.x * blockIdx.x + threadIdx.x;
   unsigned int tid = threadIdx.x;
+  unsigned int chan = blockIdx.x;
+  unsigned int inte = blockDim.x;
   unsigned int i = blockIdx.x + gridDim.x * threadIdx.x;
-  sdata[tid] = g_idata[i]/blockDim.x;
+  sdata[tid] = g_idata[i];
   __syncthreads();
   // do reduction in shared mem
   for(unsigned int s=1;s<blockDim.x;s*=2) {
     if (tid%(2*s)==0) {
-      sdata[tid] += sdata[tid + s] / blockDim.x;
+      sdata[tid] += sdata[tid+s];
     }
     __syncthreads();
   }
   // write result for this block to global mem
   if (tid == 0) g_odata[blockIdx.x] = sdata[0];
+}
+*/
+
+__global__ void vectorSum(float *g_idata, float *g_odata, int naverage){
+  // each thread loads one element from global to shared mem
+  //unsigned int tid = blockDim.x * blockIdx.x + threadIdx.x;
+  unsigned int chan = threadIdx.x;
+  g_odata[chan] = g_idata[chan];
+  // do reduction in shared mem
+  for(unsigned int s=1;s<naverage;s++) {
+    g_odata[chan] += g_idata[chan+blockDim.x*s];
+  }
 }
 
 /*

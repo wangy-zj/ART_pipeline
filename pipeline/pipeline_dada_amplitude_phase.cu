@@ -62,7 +62,7 @@ int main(int argc, char *argv[]){
   key_t phase_output_key = DADA_DEFAULT_BLOCK_KEY+40;  
   int gpu = 0;
   int nthread_amp = 128;   
-  int nthread_phase = 128;
+  //int nthread_phase = 128;
   int nblocksave = 128;  
   
   while (1) {
@@ -353,7 +353,7 @@ int main(int argc, char *argv[]){
 	blck_phi.x = nthread_phase;  
   grid_phi.x = (nchan - 1 + blck_phi.x) / blck_phi.x;
   */
-
+  dim3 blck_inte(nchan,naverage);
   // Setup cuda buffers
 
   /* 声明并开辟CPU相关变量内存 */
@@ -425,15 +425,16 @@ int main(int argc, char *argv[]){
     getLastCudaError("Kernel execution failed [ unpack input data ]");
 
     /* 计算幅度和相位 */
-    krnl_amplitude_phase<<<nchan, npkt>>>(d_amplitude,d_phase, d_unpack, FFTlen, nchan);
+    krnl_amplitude_phase<<<nchan, npkt>>>(d_amplitude,d_phase,d_unpack, FFTlen, nchan);
     getLastCudaError("Kernel execution failed [ amplitude computing ]");
 
+    //cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte);
     /* 幅度积分 */
-    vectorSum<<<nchan, naverage>>>(d_amplitude, out_amplitude);
+    vectorSum<<<1,nchan>>>(d_amplitude, out_amplitude, naverage);
     getLastCudaError("Kernel execution failed [ amplitude integration ]");
 
     /*相位积分 */
-    vectorSum<<<nchan, naverage>>>(d_phase, out_phase);
+    vectorSum<<<1,nchan>>>(d_phase, out_phase, naverage);
     getLastCudaError("Kernel execution failed [ phase integration ]");
     //fprintf(stderr, "computing done!\n");
     nblock++;
@@ -515,5 +516,12 @@ int main(int argc, char *argv[]){
   dada_hdu_destroy(amplitude_output_hdu);
   dada_hdu_destroy(phase_output_hdu);
 
+  cudaFree(d_input);
+  cudaFree(d_unpack);
+  cudaFree(d_amplitude);
+  cudaFree(d_phase);
+  cudaFree(out_amplitude);
+  cudaFree(out_phase);
+
   return EXIT_SUCCESS;
-}    
+}
