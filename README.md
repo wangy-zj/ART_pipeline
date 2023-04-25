@@ -56,7 +56,7 @@
   
   ### 启动pipeline，接收数据并在GPU中进行计算，结果存储
   
-  
+![ARP_pipeline](https://user-images.githubusercontent.com/110006648/234159154-f6134435-2ea4-4909-8ce7-7ab56f214e60.png)  
 
    配置scripts/pipeline.sh文件
    
