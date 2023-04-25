@@ -53,8 +53,24 @@
   编译之后运行：/build/udp/udpgen
 
 ## 从FPGA上接收udp包并进行处理和存储
+
+  ### 1. 仅存储原始数据
   
-  ### 启动pipeline，接收数据并在GPU中进行计算，结果存储
+  修改udp/udp2db.sh文件
+  
+  WORK_ROOT：代码所在路径
+  
+  pkt_dtsz   与udp.h保持一致，用来计算ringbuffer大小
+  
+  nstream_gpu    与udp.h保持一致
+  
+  npkt    2048   ringbuffer中每个block的包数目，用来计算和配置block大小
+  
+  存储文件大小修改：udp/udp2db.cpp 中设置nblocksave参数，之后重新编译。
+  
+  运行udp/udp2db.sh
+  
+  ### 2. 存储原始数据，在GPU上计算幅度和相位并存储
   
 ![ARP_pipeline](https://user-images.githubusercontent.com/110006648/234159154-f6134435-2ea4-4909-8ce7-7ab56f214e60.png)  
 
@@ -68,9 +84,9 @@
    
    配置存储目录：dir_raw(原始udp包数据目录)，dir_amp(幅度数据存储目录)，dir_phi(相位数据存储目录)
    
-   启动pipeline：$pipeline_command -i $key_raw -a $key_amp -p $key_phi -n $nreader_raw -g 0
+   配置pipeline启动行：$pipeline_command -i $key_raw -a $key_amp -p $key_phi -n $nreader_raw -g 0
    
-   启动udp2db：$udp_command -f $hdr_fname -F $freq -n $nblock -N $nsecond -k $key_raw
+   配置udp2db启动行：$udp_command -f $hdr_fname -F $freq -n $nblock -N $nsecond -k $key_raw
    
    运行scripts/pipeline.sh
    
