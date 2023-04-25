@@ -42,7 +42,7 @@
   nfft is defined by gridDim.y
   ideally we need to transport data from [NFFT NCHAN] to [NCHAN NFFT] before we do time accumulation
 */
-__global__ void krnl_unpack(int32_t *input, cuComplex *output, int nsamp, int chan);
+__global__ void krnl_unpack(int32_t *input, cuComplex *output, int nsamp);
 
 __global__ void krnl_amplitude_phase(float *d_amplitude, float * d_divisionOut, cuComplex *d_input, int FFTlen, int nchan);
 

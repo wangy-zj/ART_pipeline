@@ -63,7 +63,7 @@ int main(int argc, char *argv[]){
   int gpu = 0;
   int nthread_amp = 128;   
   //int nthread_phase = 128;
-  int nblocksave = 128;  
+  int nblocksave = 1024;  
   
   while (1) {
     unsigned ss;
@@ -421,7 +421,7 @@ int main(int argc, char *argv[]){
     fprintf(stdout, "Memory copy from host to device of %d block done\n", nblock);
 
     /* 解析输入数据 */
-    krnl_unpack<<<nchan, npkt>>>(d_input,d_unpack,nsamp,nchan);
+    krnl_unpack<<<nchan, npkt>>>(d_input,d_unpack,nsamp);
     getLastCudaError("Kernel execution failed [ unpack input data ]");
 
     /* 计算幅度和相位 */
@@ -487,7 +487,7 @@ int main(int argc, char *argv[]){
   fprintf(stdout, "pipeline   %f milliseconds, pipline with memory transfer averaged with %d blocks\n", pipelinetime/(float)nblock, nblock);
   fprintf(stdout, "pipeline   %f milliseconds, memory transfer h2d averaged with %d blocks\n", memcpyh2dtime/(float)nblock, nblock);
   fprintf(stdout, "pipeline   %f milliseconds, memory transfer d2h averaged with %d blocks\n", memcpyd2htime/(float)nblock, nblock);
-  
+/*  
   if(dada_hdu_unlock_read(input_hdu) < 0) {
     fprintf(stderr, "PROCESS_ERROR:\tError unlocking input HDU, \n"
 	    "which happens at \"%s\", line [%d], has to abort.\n",
@@ -515,7 +515,7 @@ int main(int argc, char *argv[]){
   dada_hdu_destroy(input_hdu);
   dada_hdu_destroy(amplitude_output_hdu);
   dada_hdu_destroy(phase_output_hdu);
-
+*/
   cudaFree(d_input);
   cudaFree(d_unpack);
   cudaFree(d_amplitude);

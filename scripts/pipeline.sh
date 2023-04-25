@@ -101,9 +101,9 @@ numa=0 # numa node to use
 $echo "numa is: $numa\n"
 
 $echo "Creating ring buffers"
-dada_raw="dada_db -k $key_raw -b $bufsz_raw -n 8 -p -w -c $numa -r 2"  #assign memory from NUMA node  [default: all nodes]
-dada_amp="dada_db -k $key_amp -b $bufsz_amp -n 8 -p -w -c $numa"
-dada_phi="dada_db -k $key_phi -b $bufsz_phi -n 8 -p -w -c $numa"
+dada_raw="dada_db -k $key_raw -b $bufsz_raw -n 20 -p -w -c $numa -r 2"  #assign memory from NUMA node  [default: all nodes]
+dada_amp="dada_db -k $key_amp -b $bufsz_amp -n 20 -p -w -c $numa"
+dada_phi="dada_db -k $key_phi -b $bufsz_phi -n 20 -p -w -c $numa"
 
 $echo "dada_raw is: $dada_raw"
 $echo "dada_amp is: $dada_amp"
@@ -118,6 +118,8 @@ keys+=(`echo $key_amp `)
 $dada_phi & # should be unblock
 pids+=(`echo $! `)
 keys+=(`echo $key_phi `)
+
+#$echo "existing pids are ${pids[@]}"
 
 sleep 1s # to wait all buffers are created 
 $echo "created all ring buffers\n"
@@ -142,14 +144,19 @@ $echo "writer_amp is: $writer_amp"
 $echo "writer_phi is: $writer_phi\n"
 
 $writer_raw & # should be unblock 
+pids+=(`echo $! `)
+keys+=(`echo $write_raw `)
 $writer_amp & # should be unblock
+pids+=(`echo $! `)
+keys+=(`echo $write_amp `)
 $writer_phi & # should be unblock
+pids+=(`echo $! `)
+keys+=(`echo $write_phi `)
 
 # now gpu pipeline
 $echo "Starting process"
 process="$pipeline_command -i $key_raw -a $key_amp -p $key_phi -n $nreader_raw -g 0" # need to add other configurations as well
 $echo "process: $process\n"
-$process & # should be unblock
 
 # now udp2db
 # udp2db is the only program which should be blocked (before cleanup),
@@ -163,7 +170,7 @@ $process & # should be unblock
 #$udp2db
 hdr_fname=$hdr_root/art_test.header
 nblock=100
-nsecond=50
+nsecond=10
 freq=1420
 
 $echo "hdr_fname is: $hdr_fname"
@@ -171,12 +178,12 @@ $echo "nblock is:    $nblock"
 $echo "nsecond is:   $nsecond"
 $echo "freq is:      $freq\n"
 
-# Start udp2db
+# Start pipeline and udp2db
+$process & # should be unblock
 $udp_command -f $hdr_fname -F $freq -n $nblock -N $nsecond -k $key_raw
 
-
 sleep 1s # to wait all process finishes
-$echo "done udp2db setup\n"
+
+$echo "done processing\n"
 
 cleanup
-

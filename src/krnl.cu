@@ -5,10 +5,10 @@
 #include "../include/krnl.h"
 
 
-__global__ void krnl_unpack(int32_t *input, cuComplex *output, int nsamp, int chan){
+__global__ void krnl_unpack(int32_t *input, cuComplex *output, int nsamp){
   int i = blockIdx.x * blockDim.x + threadIdx.x;
   int index = i*2;
-  if(index<nsamp*chan*2){
+  if(index<nsamp*2){
     output[i] = make_cuFloatComplex((float)input[index],(float)input[index+1]);
   }
 }
