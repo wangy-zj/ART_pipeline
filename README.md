@@ -52,7 +52,11 @@
 
   编译之后运行：/build/udp/udpgen
 
-### 4.启动pipeline，接收数据并在GPU中进行计算，结果存储
+## 从FPGA上接收udp包并进行处理和存储
+  
+  ### 启动pipeline，接收数据并在GPU中进行计算，结果存储
+  
+  
 
    配置scripts/pipeline.sh文件
    
