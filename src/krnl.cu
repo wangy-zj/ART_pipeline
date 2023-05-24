@@ -6,9 +6,10 @@
 
 
 __global__ void krnl_unpack(int32_t *input, cuComplex *output, int nsamp){
-  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  int blockid = blockIdx.x + blockIdx.y * gridDim.x;
+  int i = blockid*(blockDim.x*blockDim.y) + (threadIdx.x);
   int index = i*2;
-  if(index<nsamp*2){
+  if(i<nsamp){
     output[i] = make_cuFloatComplex((float)input[index],(float)input[index+1]);
   }
 }
@@ -51,12 +52,20 @@ __global__ void vectorSum(float *g_idata, float *g_odata){
 __global__ void vectorSum(float *g_idata, float *g_odata, int naverage){
   // each thread loads one element from global to shared mem
   //unsigned int tid = blockDim.x * blockIdx.x + threadIdx.x;
+  
   unsigned int chan = threadIdx.x;
-  g_odata[chan] = g_idata[chan];
+  unsigned int samp = blockIdx.x;
+  unsigned int nchan = blockDim.x;
+  //g_odata[chan+samp*nchan] = g_idata[chan+samp*nchan*naverage];
+  g_odata[chan+samp*nchan] = chan+samp*nchan;
   // do reduction in shared mem
-  for(unsigned int s=1;s<naverage;s++) {
-    g_odata[chan] += g_idata[chan+blockDim.x*s];
+  for(unsigned int s=1;s<naverage;s++){
+    //g_odata[chan+samp*nchan] += g_idata[chan+nchan*s+samp*nchan*naverage];
+    g_odata[chan+samp*nchan] = g_odata[chan+samp*nchan] + s;
+    //printf("the chan is %d, the samp is %d, the s is %d, godata is %d\n",chan,samp,s,g_odata[chan+samp*nchan]);
   }
+  __syncthreads();
+  //printf("the index is %d, g_odata is %f\n",chan+samp*nchan,g_odata[chan+samp*nchan]);
 }
 
 /*

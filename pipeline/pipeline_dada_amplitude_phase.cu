@@ -353,7 +353,9 @@ int main(int argc, char *argv[]){
 	blck_phi.x = nthread_phase;  
   grid_phi.x = (nchan - 1 + blck_phi.x) / blck_phi.x;
   */
-  dim3 blck_inte(nchan,naverage);
+  //dim3 blck_inte(nchan,naverage);
+  dim3 grid_unpack(npkt/100+1,100);
+  int blck_inte = npkt/naverage;
   // Setup cuda buffers
 
   /* 声明并开辟CPU相关变量内存 */
@@ -421,7 +423,7 @@ int main(int argc, char *argv[]){
     fprintf(stdout, "Memory copy from host to device of %d block done\n", nblock);
 
     /* 解析输入数据 */
-    krnl_unpack<<<nchan, npkt>>>(d_input,d_unpack,nsamp);
+    krnl_unpack<<<grid_unpack, nchan>>>(d_input,d_unpack,nsamp);
     getLastCudaError("Kernel execution failed [ unpack input data ]");
 
     /* 计算幅度和相位 */
@@ -430,11 +432,11 @@ int main(int argc, char *argv[]){
 
     //cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte);
     /* 幅度积分 */
-    vectorSum<<<1,nchan>>>(d_amplitude, out_amplitude, naverage);
+    vectorSum<<<blck_inte,nchan>>>(d_amplitude, out_amplitude, naverage);
     getLastCudaError("Kernel execution failed [ amplitude integration ]");
 
     /*相位积分 */
-    vectorSum<<<1,nchan>>>(d_phase, out_phase, naverage);
+    vectorSum<<<blck_inte,nchan>>>(d_phase, out_phase, naverage);
     getLastCudaError("Kernel execution failed [ phase integration ]");
     //fprintf(stderr, "computing done!\n");
     nblock++;
