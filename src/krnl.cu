@@ -4,26 +4,24 @@
 
 #include "../include/krnl.h"
 
-
-__global__ void krnl_unpack(int32_t *input, cuComplex *output, int nsamp){
-  int blockid = blockIdx.x + blockIdx.y * gridDim.x;
-  int i = blockid*(blockDim.x*blockDim.y) + (threadIdx.x);
-  int index = i*2;
-  if(i<nsamp){
-    output[i] = make_cuFloatComplex((float)input[index],(float)input[index+1]);
+// 数据解析,求解幅度和相位
+__global__ void krnl_amplitude_phase(int32_t *input, float *d_amplitudeOut, float * d_divisionOut, int nsamp)
+{
+  int samp = blockIdx.x + blockIdx.y * gridDim.x;
+  int nchan = blockDim.x;
+  int chan = threadIdx.x;
+  int index = samp*nchan + chan;
+  if(index<nsamp){
+    //int32_t real = input[index*2];
+    //int32_t img = input[index*2+1];
+    int32_t real = index*2;
+    int32_t img = index*2+1;
+    d_amplitudeOut[index] = 10*log10f(powf(real,2)+powf(img,2)+(10e-8))-180+7;
+    d_divisionOut[index] = atan2f(real,img+(10e-8));
   }
-}
-
-
-__global__ void krnl_amplitude_phase(float *d_amplitudeOut, float * d_divisionOut, cufftComplex * d_fftOut, int NX, int N){
-  int i = (blockIdx.x * blockDim.x) + threadIdx.x;
-  if (i<N){
-    d_amplitudeOut[i] = cuCabsf(d_fftOut[i]) / NX;
-    d_divisionOut[i] = atan2f(d_fftOut[i].y, d_fftOut[i].x);
-  }
-  if(d_divisionOut[i]<0){
-    d_divisionOut[i] += 2*M_PI;
-  }
+  //if(d_divisionOut[i]<0){
+   // d_divisionOut[i] += 2*M_PI;
+  //}
 }
 
 /*
@@ -49,23 +47,16 @@ __global__ void vectorSum(float *g_idata, float *g_odata){
 }
 */
 
+// 对幅度和相位进行积分
 __global__ void vectorSum(float *g_idata, float *g_odata, int naverage){
-  // each thread loads one element from global to shared mem
-  //unsigned int tid = blockDim.x * blockIdx.x + threadIdx.x;
-  
   unsigned int chan = threadIdx.x;
   unsigned int samp = blockIdx.x;
   unsigned int nchan = blockDim.x;
-  //g_odata[chan+samp*nchan] = g_idata[chan+samp*nchan*naverage];
-  g_odata[chan+samp*nchan] = chan+samp*nchan;
-  // do reduction in shared mem
+  g_odata[chan+samp*nchan] = g_idata[chan+samp*nchan*naverage]/naverage;
   for(unsigned int s=1;s<naverage;s++){
-    //g_odata[chan+samp*nchan] += g_idata[chan+nchan*s+samp*nchan*naverage];
-    g_odata[chan+samp*nchan] = g_odata[chan+samp*nchan] + s;
-    //printf("the chan is %d, the samp is %d, the s is %d, godata is %d\n",chan,samp,s,g_odata[chan+samp*nchan]);
+    g_odata[chan+samp*nchan] += g_idata[chan+nchan*s+samp*nchan*naverage]/naverage;
   }
   __syncthreads();
-  //printf("the index is %d, g_odata is %f\n",chan+samp*nchan,g_odata[chan+samp*nchan]);
 }
 
 /*

@@ -63,8 +63,9 @@ int main(int argc, char *argv[]){
   int gpu = 0;
   int nthread_amp = 128;   
   //int nthread_phase = 128;
-  int nblocksave = 1024;  
+  int nblocksave = 128;  
   
+  //参数解析
   while (1) {
     unsigned ss;
     unsigned opt=getopt_long_only(argc, argv, "i:a:p:n:g:h", 
@@ -157,8 +158,6 @@ int main(int argc, char *argv[]){
   }
 
   fprintf(stdout, "DEBUG: gpu = %d\n", gpu);
-  fprintf(stdout, "DEBUG: nthread = %d\n", nthread_amp);
-
   fprintf(stdout, "DEBUG: input_key = %x\n", input_key);
   fprintf(stdout, "DEBUG: amplitude_output_key = %x\n", amplitude_output_key);
   fprintf(stdout, "DEBUG: phase_output_key = %x\n", phase_output_key);
@@ -170,9 +169,7 @@ int main(int argc, char *argv[]){
   checkCudaErrors(cudaGetDeviceProperties(&prop, gpu_get));
   fprintf(stdout, "GPU name is %s\n", prop.name);
   
-  // Get hold of dada ring buffers
-    // Setup input dada ring buffer
-  // lock hdu will be in loop
+  // 设置并锁定输入和输出的环形缓冲
   dada_hdu_t *input_hdu = dada_hdu_create(NULL);
   dada_hdu_set_key(input_hdu, input_key);
   if(dada_hdu_connect(input_hdu) < 0){ 
@@ -248,13 +245,13 @@ int main(int argc, char *argv[]){
   fprintf(stdout, "PROCESS_INFO:\tWe have phase output HDU setup\n");
 
 
-  // Now first read configuration from input ring buffer header
+  // 解析输入环形缓冲头数据，并计算相应参数
   dada_header_t dada_header = {0};
   char *input_hbuf = ipcbuf_get_next_read(input_hblock, NULL);
   read_dada_header(input_hbuf, &dada_header);
 
   // parse values from header buffer
-  int FFTlen = 131072;   // FPGA中FFT的长度
+  //int FFTlen = 131072;   // FPGA中FFT的长度
   int nchan = dada_header.pkt_nchan;    // FFT后选出的通道数
   int naverage = dada_header.naverage;    // 积分的block数
   //int ntime = dada_header.pkt_ntime;
@@ -265,9 +262,10 @@ int main(int argc, char *argv[]){
   fprintf(stdout, "DEBUG: nsamp = %d, npkt = %d, ntime = %d \n", nsamp, npkt, ntime);
 
   // Need to check it against expected value here
-  int input_dbuf_size = nsamp * sizeof(int32_t) * 2;   // 输入为FFT后的实部虚部
+  // 计算每个环形缓冲的大小并和设置的大小匹配
+  int input_dbuf_size = nsamp * sizeof(int32_t) * 2;            // 输入为FFT后的实部虚部
   int amplitude_dbuf_size = nsamp * sizeof(float) / naverage;   // 输出幅度,积分之后
-  int phase_dbuf_size = nsamp * sizeof(float) / naverage;   // 输出相位,积分之后
+  int phase_dbuf_size = nsamp * sizeof(float) / naverage;       // 输出相位,积分之后
   
   uint64_t bytes_block_input  = ipcbuf_get_bufsz(input_dblock);
   uint64_t bytes_block_amplitude = ipcbuf_get_bufsz(amplitude_output_dblock);  
@@ -310,12 +308,11 @@ int main(int argc, char *argv[]){
   fprintf(stdout, "PROCESS_INFO:\tWe have phase output buffer block size checked\n");
 
   // now we can setup new dada header buffer for output
+  // 更新输出的dada头，主要更新FILE_SIZE,影响存储文件大小
+  // BYTES_PER_SECOND也要更新，但不影响文件存储
   char *amplitude_hbuf = ipcbuf_get_next_write(amplitude_output_hblock);
   memcpy(amplitude_hbuf, input_hbuf, DADA_DEFAULT_HEADER_SIZE);
 
-  // We update file size
-  // a single buffer block per file
-  // BYTES_PER_SECOND also need update, but ignore it for now
   if (ascii_header_set(amplitude_hbuf, "FILE_SIZE", "%d", bytes_block_amplitude*nblocksave) < 0)  {
     fprintf(stderr, "PROCESS_ERROR:\tError setting FILE_SIZE, "
 	    "which happens at \"%s\", line [%d].\n",
@@ -326,9 +323,6 @@ int main(int argc, char *argv[]){
   char *phase_hbuf = ipcbuf_get_next_write(phase_output_hblock);
   memcpy(phase_hbuf, input_hbuf, DADA_DEFAULT_HEADER_SIZE);
 
-  // We update file size
-  // a single buffer block per file
-  // BYTES_PER_SECOND also need update, but ignore it for now
   if (ascii_header_set(phase_hbuf, "FILE_SIZE", "%d", bytes_block_phase*nblocksave) < 0)  {
     fprintf(stderr, "PROCESS_ERROR:\tError setting FILE_SIZE, "
 	    "which happens at \"%s\", line [%d].\n",
@@ -340,42 +334,21 @@ int main(int argc, char *argv[]){
   ipcbuf_mark_filled(amplitude_output_hblock, DADA_DEFAULT_HEADER_SIZE);
   ipcbuf_mark_filled(phase_output_hblock, DADA_DEFAULT_HEADER_SIZE);
 
-  // Setup kernel dims
-  /*
-  dim3 grid_unpack(nsamp/nchan+1);
-  dim3 grid_int(nsamp/nchan+1);
-  dim3 blck_amp(1, 1);
-  dim3 grid_amp(1, 1);
-  dim3 blck_phi(1, 1);
-  dim3 grid_phi(1, 1);
-	blck_amp.x = nthread_amp;  
-  grid_amp.x = (nchan - 1 + blck_amp.x) / blck_amp.x;
-	blck_phi.x = nthread_phase;  
-  grid_phi.x = (nchan - 1 + blck_phi.x) / blck_phi.x;
-  */
-  //dim3 blck_inte(nchan,naverage);
-  dim3 grid_unpack(npkt/100+1,100);
-  int blck_inte = npkt/naverage;
-  // Setup cuda buffers
+  // 设置GPU计算的kernel数目
+  dim3 grid_unpack(npkt/100+1,100); //kernel dims for amp and pha computing
+  int blck_inte = npkt/naverage;    //kernel dims for amp and pha intergration
 
-  /* 声明并开辟CPU相关变量内存 */
-  float *amplitude = (float*) malloc(nsamp * sizeof(float));
-  float *phase = (float*) malloc(nsamp * sizeof(float));
-
-	/* 声明并开辟GPU相关变量内存 */
+	// 声明并开辟GPU相关变量内存
   int32_t *d_input;
-  cuComplex *d_unpack;
   float *d_amplitude, *d_phase, *out_amplitude, *out_phase;
 	checkCudaErrors(cudaMalloc(&d_input, nsamp * 2 * sizeof(int32_t)));
-  checkCudaErrors(cudaMalloc(&d_unpack, nsamp * sizeof(cuComplex)));
 	checkCudaErrors(cudaMalloc(&d_amplitude, nsamp * sizeof(float)));
   checkCudaErrors(cudaMalloc(&out_amplitude, nsamp * sizeof(float)/naverage));
 	checkCudaErrors(cudaMalloc(&d_phase, nsamp * sizeof(float)));
   checkCudaErrors(cudaMalloc(&out_phase, nsamp * sizeof(float)/naverage));
-  //int outmem = nsamp * sizeof(float)/naverage;
   print_cuda_memory_info();
 
-  // Setup timer
+  // 设置计时器，记录数据处理耗时
   cudaEvent_t pipeline_start;
   cudaEvent_t pipeline_stop;
   float pipelinetime = 0;
@@ -397,52 +370,44 @@ int main(int argc, char *argv[]){
   checkCudaErrors(cudaEventCreate(&memcpyd2h_start));
   checkCudaErrors(cudaEventCreate(&memcpyd2h_stop));
 
+  // 初始化block计数
   int nblock = 0;
-  
-  // FILE *fp1 = fopen("/home/hero/Desktop/ART-pipeline/amplitude.txt", "w");   // 存储npkt幅度数据到.txt文件方便自己查看结果
-  // FILE *fp2 = fopen("/home/hero/Desktop/ART-pipeline/phase.txt", "w");   // 存储相位数据到.txt文件方便自己查看结果
 
   CUDA_STARTTIME(pipeline);  
+  // 当block有数据时，循环处理
   while(!ipcbuf_eod(input_dblock)){
     
     fprintf(stdout, "We are at %d block\n", nblock);
 
-    // block memory copy
-    //int64_t dindex = ipcbuf_get_read_index(input_dblock);
-    //fprintf(stdout, "the offset is %" PRId64 "\n", dindex);
     char *input_cbuf = ipcbuf_get_next_read(input_dblock, &bytes_block_input);
     if(!input_cbuf){
       fprintf(stderr, "Could not get next read data block\n");
       exit(EXIT_FAILURE);
     }
     
+    // 将数据由内存拷贝至显存
     CUDA_STARTTIME(memcpyh2d);  
     checkCudaErrors(cudaMemcpy(d_input, input_cbuf, bytes_block_input, cudaMemcpyHostToDevice));
     CUDA_STOPTIME(memcpyh2d);  
     ipcbuf_mark_cleared(input_dblock);
     fprintf(stdout, "Memory copy from host to device of %d block done\n", nblock);
 
-    /* 解析输入数据 */
-    krnl_unpack<<<grid_unpack, nchan>>>(d_input,d_unpack,nsamp);
-    getLastCudaError("Kernel execution failed [ unpack input data ]");
+    //解析输入数据 并 计算幅度和相位 
+    krnl_amplitude_phase<<<grid_unpack, nchan>>>(d_input,d_amplitude,d_phase, nsamp);
+    getLastCudaError("Kernel execution failed [ amplitude & phase computing ]");
 
-    /* 计算幅度和相位 */
-    krnl_amplitude_phase<<<nchan, npkt>>>(d_amplitude,d_phase,d_unpack, FFTlen, nchan);
-    getLastCudaError("Kernel execution failed [ amplitude computing ]");
-
-    //cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte);
-    /* 幅度积分 */
+    // 幅度积分 
     vectorSum<<<blck_inte,nchan>>>(d_amplitude, out_amplitude, naverage);
     getLastCudaError("Kernel execution failed [ amplitude integration ]");
 
-    /*相位积分 */
+    // 相位积分
     vectorSum<<<blck_inte,nchan>>>(d_phase, out_phase, naverage);
     getLastCudaError("Kernel execution failed [ phase integration ]");
-    //fprintf(stderr, "computing done!\n");
+
+    // 更新block计数
     nblock++;
-    //// we copy data to ring buffer only when we get naverage blocks done
-    //// block memory copy
-    //// We will not get any output if the runtime is short than integration time
+
+    // 将计算结果由显存拷贝至内存
     CUDA_STARTTIME(memcpyd2h); 
     char *output_amplitude = ipcbuf_get_next_write(amplitude_output_dblock);
     if(!output_amplitude){
@@ -463,63 +428,17 @@ int main(int argc, char *argv[]){
     CUDA_STOPTIME(memcpyd2h);
 
     fprintf(stdout, "we copy amplitude and phase data out\n"); 
-
- 
-
-     /* 存储幅度数据到.txt文件 
-     checkCudaErrors(cudaMemcpy(amplitude, d_amplitude, bytes_block_amplitude, cudaMemcpyDeviceToHost));
-     // fwrite(amplitude, sizeof(float), nchan, fp1);   // 写入二进制数据
-     for (int i = 0; i < nchan; i++) {
-       fprintf(fp1, "%f \n", amplitude[i]);
-     }
-     checkCudaErrors(cudaMemcpy(phase, d_phase, bytes_block_phase, cudaMemcpyDeviceToHost));
-     // fwrite(phase, sizeof(float), nchan, fp2);   // 写入二进制数据
-     for (int i = 0; i < nchan; i++) {
-       fprintf(fp2, "%f \n", phase[i]);
-     }
-     */
   }
   
-  // fclose(fp1);
-  // fclose(fp2);
-  
-
   CUDA_STOPTIME(pipeline);
 
+  // 当数据流停止时结束，并输出平均数据速率
   fprintf(stdout, "pipeline   %f milliseconds, pipline with memory transfer averaged with %d blocks\n", pipelinetime/(float)nblock, nblock);
   fprintf(stdout, "pipeline   %f milliseconds, memory transfer h2d averaged with %d blocks\n", memcpyh2dtime/(float)nblock, nblock);
   fprintf(stdout, "pipeline   %f milliseconds, memory transfer d2h averaged with %d blocks\n", memcpyd2htime/(float)nblock, nblock);
-/*  
-  if(dada_hdu_unlock_read(input_hdu) < 0) {
-    fprintf(stderr, "PROCESS_ERROR:\tError unlocking input HDU, \n"
-	    "which happens at \"%s\", line [%d], has to abort.\n",
-	    __FILE__, __LINE__);
-      
-    exit(EXIT_FAILURE);
-  }
 
-  if(dada_hdu_unlock_write(amplitude_output_hdu) < 0) {
-    fprintf(stderr, "PROCESS_ERROR:\tError unlocking amplitude output HDU, \n"
-	    "which happens at \"%s\", line [%d], has to abort.\n",
-	    __FILE__, __LINE__);
-      
-    exit(EXIT_FAILURE);
-  }
-
-  if(dada_hdu_unlock_write(phase_output_hdu) < 0) {
-    fprintf(stderr, "PROCESS_ERROR:\tError unlocking phase output HDU, \n"
-	    "which happens at \"%s\", line [%d], has to abort.\n",
-	    __FILE__, __LINE__);
-      
-    exit(EXIT_FAILURE);
-  }
-
-  dada_hdu_destroy(input_hdu);
-  dada_hdu_destroy(amplitude_output_hdu);
-  dada_hdu_destroy(phase_output_hdu);
-*/
+  // 释放对应的显存
   cudaFree(d_input);
-  cudaFree(d_unpack);
   cudaFree(d_amplitude);
   cudaFree(d_phase);
   cudaFree(out_amplitude);

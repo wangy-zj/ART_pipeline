@@ -29,7 +29,7 @@
 // 1 channels per packet, each channel has 0.5 MHz,
 // each sample has 2 bytes (1 for real and 1 for image)
 #define PKT_NCHAN      1000
-#define PKT_CHAN_WIDTH 0.015625f // MHz
+#define PKT_CHAN_WIDTH 0.031250f // MHz
 #define PKT_SAMPSZ     8 // 8 bytes, 4 real and 4 imag
 #define NAVERAGE       100
 
