@@ -12,7 +12,7 @@
   
   udp包含的通道数：PKT_NCHAN  =  1000
   
-  每个通道带宽：PKT_CHAN_WIDTH  =  0.015625f(MHz)
+  每个通道带宽：PKT_CHAN_WIDTH  =  0.031250f(MHz)
   
   每个数据点的采样宽度：PKT_SAMPSZ  =  8(Bytes)  4 real and 4 imag
   
