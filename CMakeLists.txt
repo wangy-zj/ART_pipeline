@@ -9,7 +9,7 @@ endif()
 find_package(OpenMP)
 
 set(CUDA_LIBRARIES cufft curand cudart cublas)
-find_library(PSRDADA_LIBRARY psrdada $ENV{PSRDADA_ROOT}/lib)
+find_library(PSRDADA_LIBRARY psrdada $ENV{/home/hero/code/psrdada}/lib)
 
 add_subdirectory(src)
 add_subdirectory(udp)

@@ -19,6 +19,7 @@ extern "C" {
     double pkt_tsamp;
     double freq;
     int naverage;
+    int nstream;
   }dada_header_t;
 
   int read_dada_header(const char *dada_header_buffer, dada_header_t *dada_header);

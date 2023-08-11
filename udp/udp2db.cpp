@@ -27,7 +27,7 @@ int main(int argc, char *argv[]){
   double freq = 1400.0;
   int nblock  = 100;
   int nsecond = 10;
-  int nblocksave = 128;
+  int nblocksave = 1024;
   key_t key = 0x0000a000;
   
   sprintf(fname, "../../header/paf_test.header");
@@ -419,7 +419,8 @@ int main(int argc, char *argv[]){
     packet_header_t *packet_header = (packet_header_t *)dbuf;
     uint64_t counter = packet_header->counter;
     //uint64_t ad      = packet_header->flag - AD0;   //如果只有一个ad，去掉本行
-    
+
+
 #ifdef DEBUG
     fprintf(stdout, "UDP2DB_DEBUG: counter is %" PRIu64 ", and from %s_%d at \"%s\", line [%d]\n",
     	    counter, inet_ntoa(fromsa.sin_addr), ntohs(fromsa.sin_port), __FILE__, __LINE__);

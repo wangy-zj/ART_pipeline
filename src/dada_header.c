@@ -64,7 +64,7 @@ int read_dada_header(const char *dada_header_buffer, dada_header_t *dada_header)
     exit(EXIT_FAILURE);
   }
 
-  if (ascii_header_get(dada_header_buffer, "PKT_NTIME", "%lf", &dada_header->pkt_ntime) < 0)  {
+  if (ascii_header_get(dada_header_buffer, "PKT_NTIME", "%d", &dada_header->pkt_ntime) < 0)  {
     fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting PKT_NTIME, "
             "which happens at %s, line [%d].\n",
             __FILE__, __LINE__);
@@ -87,6 +87,13 @@ int read_dada_header(const char *dada_header_buffer, dada_header_t *dada_header)
 
   if (ascii_header_get(dada_header_buffer, "NAVERAGE", "%d", &dada_header->naverage) < 0)  {
     fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting NAVERAGE, "
+            "which happens at %s, line [%d].\n",
+            __FILE__, __LINE__);
+    exit(EXIT_FAILURE);
+  }
+
+  if (ascii_header_get(dada_header_buffer, "NSTREAM", "%d", &dada_header->nstream) < 0)  {
+    fprintf(stderr, "WRITE_DADA_HEADER_ERROR: Error getting NSTREAM, "
             "which happens at %s, line [%d].\n",
             __FILE__, __LINE__);
     exit(EXIT_FAILURE);

@@ -41,11 +41,11 @@
 // define network interfaces
 //#define IP_SEND     "192.168.2.20"
 //#define IP_RECV     "192.168.2.90"
-//#define IP_SEND     "10.17.4.2"*/**
+#define IP_SEND     "10.11.153.134"
 
-//#define IP_RECV     "10.17.4.2"
-#define IP_SEND     "10.11.4.54"
-#define IP_RECV     "10.11.4.54"
+#define IP_RECV     "10.11.153.134"
+//#define IP_SEND     "10.11.4.54"
+//#define IP_RECV     "10.11.4.54"
 #define PORT_SEND   10000 
 #define PORT_RECV   60000
 #define AD0         96

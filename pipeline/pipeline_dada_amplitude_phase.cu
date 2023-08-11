@@ -254,10 +254,11 @@ int main(int argc, char *argv[]){
   //int FFTlen = 131072;   // FPGA中FFT的长度
   int nchan = dada_header.pkt_nchan;    // FFT后选出的通道数
   int naverage = dada_header.naverage;    // 积分的block数
-  //int ntime = dada_header.pkt_ntime;
-  int ntime = 1;
-  int npkt = dada_header.npkt;
-  int nsamp = npkt*nchan*ntime;
+  int ntime = dada_header.pkt_ntime;    //每个包的时间数目
+  //int ntime = 1;
+  int nstream = dada_header.nstream;    // 数据路数
+  int npkt = dada_header.npkt;          // 每个block包含的包数目
+  int nsamp = npkt*nchan*ntime*nstream; // 总的数据点数
 
   fprintf(stdout, "DEBUG: nsamp = %d, npkt = %d, ntime = %d \n", nsamp, npkt, ntime);
 
@@ -335,7 +336,7 @@ int main(int argc, char *argv[]){
   ipcbuf_mark_filled(phase_output_hblock, DADA_DEFAULT_HEADER_SIZE);
 
   // 设置GPU计算的kernel数目
-  dim3 grid_unpack(npkt/100+1,100); //kernel dims for amp and pha computing
+  dim3 grid_unpack(npkt*nstream/100+1,100); //kernel dims for amp and pha computing
   int blck_inte = npkt/naverage;    //kernel dims for amp and pha intergration
 
 	// 声明并开辟GPU相关变量内存

@@ -53,6 +53,7 @@ $echo "udp_command is:  $udp_command\n"
 # setup dada buffer
 pkt_dtsz=8000
 nstream_gpu=1
+blockperbuf=10
 npkt=1000
 numa=0
 key=a000
@@ -65,7 +66,7 @@ $echo "DADA key is:    $key"
 $echo "bufsz is:       $bufsz\n"
 
 # create PSRDADA ring buffer
-dada_db -k $key -b $bufsz -p -l -c $numa -w &
+dada_db -k $key -b $bufsz -n $blockperbuf -p -l -c $numa -w &
 pids+=(`echo $! `)
 keys+=(`echo $key `)
 sleep 1s # just to make sure that all ring buffers are created
@@ -73,14 +74,14 @@ $echo "created all ring buffers\n"
 
 # setup data consumers
 #dada_dbnull -k $key -z &
-dada_dbdisk -k $key -D $data_raw_dir -W &
+dada_dbdisk -k $key -D $data_raw_dir -W -z -v &
 pids+=(`echo $! `)
 $echo "had the data consumer up\n"
 
 # setup tests
 hdr_fname=$hdr_root/art_test.header
 nblock=100
-nsecond=20
+nsecond=10
 freq=1420
 
 $echo "hdr_fname is: $hdr_fname"

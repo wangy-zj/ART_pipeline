@@ -78,7 +78,7 @@ $echo "nreader_phi is: $nreader_phi\n"
 
 # udp包的设置，用于计算缓冲区大小，要与udp.h中一致
 pkt_dtsz=8000   #单个包数据大小
-nstream=1       #包含数据流数目
+nstream=5       #包含数据流数目
 npkt=1000       #单个block包含的包数目
 naverage=100    #积分长度
 
