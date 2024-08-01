@@ -1,4 +1,4 @@
-# (A-Li Read Out) ART_pipeline
+# (Astronomical Read Out) ART_pipeline
 
 ## 模拟udp包的发送和接收
 
